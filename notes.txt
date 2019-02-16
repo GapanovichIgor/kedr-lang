@@ -1,0 +1,173 @@
+
+----
+function inverse relation - generalization of active patterns
+might not work with overloading/type classes
+
+val strOf : 'a -> String
+let strOf x = x.ToString()
+
+val intOfStr : String -> Maybe Int
+let intOfStr s =
+	match Int32.TryParse s with
+	| true, i -> Just i
+	| _ -> Nothing
+
+let intOfStr <-> strOf{Int}
+
+...
+
+match str with
+| strOf i -> i	// can be used in pattern matching because inverse function returns Maybe
+| _ -> 0
+
+let (intOfStr s) = i	// can be used in deconstruction because inverse function definitely returns value
+
+----
+function overloading
+allowed as long as fully qualified name is unique
+
+module A =
+	val foo : Int32 -> Unit
+	val foo : Float32 -> Unit // NO - same namespace
+
+module B =
+	val foo : Float32 -> Unit // YES - different namespace
+
+...
+
+import A
+import B
+
+foo 1
+foo 1.0
+
+let renamedFoo = A.foo
+
+----
+function syntax
+
+val foo : Int -> Int
+let foo x = x
+// or
+let foo = \x -> x
+
+val ptrn : Int -> String
+let ptrn = match with		// allow inspecting arguments for point free functions somehow?
+	| 0 -> "0"
+	| 1 -> "1"
+	| _ -> "many"
+
+----
+sum types
+
+type T = T
+
+type T2 =
+	| T2Of Int
+
+type T3 =
+	| T3OfInt Int
+	| T3OfString String
+
+----
+records
+
+type Doc = {
+	code : String
+	name : String
+}
+
+let d = { code = "1"; name = "a" }
+let d2 = d |> { with code = "2" }
+let d3 = { d with code = "3" }
+let update = { with code = "2" }
+
+type DocOfDoc = {
+	doc : Doc
+}
+
+let dd = { doc = { code = "1"; name = "a" } }
+let dd2 = { dd with doc.code = "2" }			// lensing
+
+----
+mutable
+
+val x : Mutable Int
+let x = Mutable 1
+
+x <- 2
+
+// might want to add implicit conversion functions
+
+----
+type providers
+
+@ TypeProvider
+val provideCast : Type -> Type -> TypeProviderResult
+let provideCast a b =
+	// implementation
+
+val cast : provideCast a b // cast : a -> b for a and b that are compatible
+let cast x = (provideCast a b) x
+
+
+let ints = [1; 2; 3]
+
+val longs : List Long
+let longs = ints |> map cast
+
+--
+or module providers?
+
+// provided module would look like:
+module castModule a b =
+	type T = a -> b
+
+	val cast : T
+	let cast x = ...
+
+val cast : castModule a b => a -> b
+let cast = (castModule a b).cast
+
+// then parametrization can be generalized to normal modules too
+module MyModule a =
+	type T = T a
+
+	val bind : (b -> c) -> (MyModule b).T -> (MyModule c).T
+	let bind = ...
+
+// this implies modules should not have mutable data
+
+----
+match as function?
+
+val foo : Int -> String
+let foo = match with
+	| 0 -> "0"
+	| 1 -> "1"
+	| _ -> "many"
+
+let foo x =
+	match x with
+	| 0 -> "none"
+	| _ -> "some"
+
+// "match <expr> with" is shorthand for "<expr> |> match with"
+// curried form is allowed e. g. "match <expr1> <expr2> with"
+
+----
+generalized list syntax?
+
+type MyType a =
+	| Nil 
+	| (::) : a -> MyType a -> MyType a
+
+// automatically gets
+val x : MyType Int
+let x = [1; 2; 3]
+
+----
+no tuples, yes pairs
+val t : (Int * Long * String)
+// is shorthand for
+val t : (Int * (Long * String))
