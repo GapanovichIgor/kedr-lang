@@ -9,8 +9,13 @@ type Token =
 
 type private ParserState = unit
 
-let private numberParser = regex "\d+(\.\d+)?" |>> Number
-let private kedrParser = numberParser
+let private numberParser =
+    regex "\d+(\.\d+)?"
+    |>> Number
+    
+let private kedrParser =
+    numberParser
+    .>> eof
 
 let parse (encoding : Encoding) (streamName : string, stream : Stream) : Result<Token list, string> =
     let state = ()
