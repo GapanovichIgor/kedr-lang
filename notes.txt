@@ -12,7 +12,7 @@ let intOfStr s =
 	| true, i -> Just i
 	| _ -> Nothing
 
-let intOfStr <-> strOf{Int}
+let intOfStr <-> strOf <Int>
 
 ...
 
@@ -92,8 +92,8 @@ let dd2 = { dd with doc.code = "2" }			// lensing
 ----
 mutable
 
-val x : Mutable Int
-let x = Mutable 1
+val x : Ref Int
+let x = RefOf 1
 
 x <- 2
 
@@ -171,3 +171,39 @@ no tuples, yes pairs
 val t : (Int * Long * String)
 // is shorthand for
 val t : (Int * (Long * String))
+
+----
+implicit arguments
+
+val foo : <a:Type> -> a -> a
+
+foo 1 // a = Int implicitely
+foo <Int> 1 // explicit unnamed
+foo <a=Int> 1 // explicit named
+
+----
+monadic computation
+
+val async : // monadic type
+
+let asyncInt = async#
+	pure 1
+
+let someM = (mkM 1)# pure 1
+
+----
+quotation
+
+val expr : Expr (Int -> Int)
+let expr = {@ \x -> x + 2 @}
+
+
+----
+wildcard in types
+
+val lst : List _ // lst is List (Unit -> Int)
+let lst = [
+	\() -> 1
+	\() -> 2
+	\() -> 3
+	]
