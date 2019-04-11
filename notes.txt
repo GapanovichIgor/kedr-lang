@@ -120,20 +120,20 @@ let longs = ints |> map cast
 or module providers?
 
 // provided module would look like:
-module castModule a b =
-	type T = a -> b
+module castModule 'a 'b =
+	type T = 'a -> 'b
 
 	val cast : T
 	let cast x = ...
 
-val cast : castModule a b => a -> b
-let cast = (castModule a b).cast
+val cast : castModule 'a 'b => 'a -> 'b
+let cast = (castModule 'a 'b).cast
 
 // then parametrization can be generalized to normal modules too
-module MyModule a =
-	type T = T a
+module MyModule 'a =
+	type T = T 'a
 
-	val bind : (b -> c) -> (MyModule b).T -> (MyModule c).T
+	val bind : ('b -> 'c) -> (MyModule 'b).T -> (MyModule 'c).T
 	let bind = ...
 
 // this implies modules should not have mutable data
@@ -158,9 +158,9 @@ let foo x =
 ----
 generalized list syntax?
 
-type MyType a =
+type MyType 'a =
 	| Nil 
-	| (::) : a -> MyType a -> MyType a
+	| (::) : 'a -> MyType 'a -> MyType 'a
 
 // automatically gets
 val x : MyType Int
@@ -175,9 +175,9 @@ val t : (Int * (Long * String))
 ----
 implicit arguments
 
-val foo : <a:Type> -> a -> a
+val foo : <'a:Type> -> 'a -> 'a
 
-foo 1 // a = Int implicitely
+foo 1 // 'a = Int implicitely
 foo <Int> 1 // explicit unnamed
 foo <a=Int> 1 // explicit named
 
@@ -207,3 +207,11 @@ let lst = [
 	\() -> 2
 	\() -> 3
 	]
+
+
+----
+type args
+
+val foo : 'a -> 'b
+
+val fooHigher : (''a -> ''b) -> 'a -> 'b
