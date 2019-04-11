@@ -1,4 +1,5 @@
 module Kedr.Lexer.Tests.Gen
+
 open System.Text
 open FsCheck
 
