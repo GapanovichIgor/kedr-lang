@@ -31,7 +31,7 @@ let tests =
 
         testPropertyWithConfig cfg name f
 
-    testList "" [
+    testList "properties" [
         testProperty "a number is parsed back to itself" <| fun (decNum : DecimalNumber) ->
             parse !decNum = Ok [ Number !decNum ]
 
