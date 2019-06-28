@@ -3,7 +3,7 @@ module Kedr.Lexer.Tests.Setup
 open Expecto
 
 type Arbs =
-    static member DecimalNumber () = DecimalNumber.arb
+    static member DecimalNumberLiteral () = DecimalNumberLiteral.arb
     static member Token () = Token.arb
     static member Whitespace () = Whitespace.arb
 

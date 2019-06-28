@@ -8,7 +8,8 @@
   <ItemGroup>
     <Compile Include="Gen.fs" />
     <Compile Include="Data\Whitespace.fs" />
-    <Compile Include="Data\DecimalNumber.fs" />
+    <Compile Include="Data\DecimalNumberLiteral.fs" />
+    <Compile Include="Data\StringLiteral.fs" />
     <Compile Include="Data\Token.fs" />
     <Compile Include="Setup.fs" />
     <Compile Include="Parser.Tests.fs" />
