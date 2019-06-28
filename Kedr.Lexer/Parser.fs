@@ -6,19 +6,29 @@ open FParsec
 
 type Token =
     | Number of string
+    | StringLiteral of contents:string
 
 type private ParserState = unit
 
-let private pNumber =
-    regex "-?\d+(\.\d+)?"
+let private pNumberLiteral =
+    regex "-?\d+(\.\d+)?" // IT NORMALIZES NEWLINES
     |>> Number
 
-let private pExpression =
-    pNumber
+let private pStringLiteral =
+    regex "\"[^\"]*\""
+    |>> (fun str ->
+        let contents = str.Substring(1, str.Length - 2)
+        StringLiteral contents )
+
+let private pToken =
+    choice [
+        pNumberLiteral
+        pStringLiteral
+    ]
 
 let private kedrParser =
     (
-        spaces >>. (sepEndBy1 pExpression spaces1)
+        spaces >>. (sepEndBy1 pToken spaces1)
     )
     .>>
     eof

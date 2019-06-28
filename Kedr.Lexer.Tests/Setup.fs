@@ -3,9 +3,10 @@ module Kedr.Lexer.Tests.Setup
 open Expecto
 
 type Arbs =
-    static member DecimalNumberLiteral () = DecimalNumberLiteral.arb
-    static member Token () = Token.arb
     static member Whitespace () = Whitespace.arb
+    static member DecimalNumberLiteral () = DecimalNumberLiteral.arb
+    static member StringLiteral () = StringLiteral.arb
+    static member Token () = Token.arb
 
 let inline (++) res1 res2 =
     match res1, res2 with

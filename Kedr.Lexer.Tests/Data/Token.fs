@@ -8,25 +8,33 @@ type Token private (token) =
     member __.str =
         match token with
         | DecimalNumber n -> n.str
+        | StringLiteral s -> s.str
 
-    override this.ToString() = sprintf "\"%s\"" this.str
+    override this.ToString() =
+        match token with
+        | DecimalNumber n -> n.ToString()
+        | StringLiteral s -> s.ToString()
 
     static member generator = gen {
-        //let! kind = Gen.choose(0, 1)
-        let! num = Arb.generate<DecimalNumber>
+        let! token = Arb.generate<Token'>
 
-        return Token (DecimalNumber num)
+        return Token token
     }
 
     static member shrink (value : Token) = seq {
         match value.token with
         | DecimalNumber n ->
             yield!
-                DecimalNumber.shrink n
+                DecimalNumberLiteral.shrink n
                 |> Seq.map (DecimalNumber >> Token)
+        | StringLiteral s ->
+            yield!
+                StringLiteral.shrink s
+                |> Seq.map (StringLiteral >> Token)
     }
 
     static member arb = Arb.fromGenShrink (Token.generator, Token.shrink)
 
 and private Token' =
-    | DecimalNumber of DecimalNumber
+    | DecimalNumber of DecimalNumberLiteral
+    | StringLiteral of StringLiteral
