@@ -5,7 +5,7 @@ open Kedr.Parser
 open Kedr.Lexer.Tests.Setup
 type Token = Kedr.Lexer.Tests.Token
 
-let private parse = fun source -> parseString ("source.kedr", source)
+let private parse = fun source -> parseString source |> List.ofSeq
 
 [<Tests>]
 let tests =
