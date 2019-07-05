@@ -3,10 +3,10 @@ module Kedr.Lexer.Tests.Setup
 open Expecto
 
 type Arbs =
-    static member Whitespace () = Whitespace.arb
-    static member DecimalNumberLiteral () = DecimalNumberLiteral.arb
-    static member StringLiteral () = StringLiteral.arb
-    static member Token () = Token.arb
+    static member Whitespace () = TestWhitespace.arb
+    static member Number () = TestNumber.arb
+    static member QuotedString () = TestQuotedString.arb
+    static member AnyToken () = TestAnyToken.arb
 
 let inline (++) res1 res2 =
     match res1, res2 with
@@ -15,8 +15,10 @@ let inline (++) res1 res2 =
     | Ok _, er -> er
     | Error reason1, Error reason2 -> Error (reason1 + "|" + reason2)
 
-let inline (!) x =
+let inline toStr x =
     ( ^a : (member str : string with get) x )
+    
+let inline (!) x = toStr x
 
 let cfg = {
     FsCheckConfig.defaultConfig with

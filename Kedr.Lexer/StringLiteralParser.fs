@@ -1,18 +1,24 @@
-namespace Kedr.Parser
+namespace Kedr
+open System
 
-type private State = Nothing | AtContents | AtEnd
+type private StringLiteralMatcherState = Nothing | AtContents | AtEnd
 
-type internal StringLiteralMatcher() =
+type internal StringLiteralParser() =
     let ssNothing = (Nothing, Initial)
     let ssAtContents = (AtContents, PartialMatch)
     let ssAtEnd = (AtEnd, CompleteMatch)
 
     let mutable stateStatus = ssNothing
 
-    interface IMatcher with
-        override val Parser = Some StringLiteral
+    interface IParser<char, Token> with
+        override __.Parse (chars : char array) =
+            String(chars, 1, chars.Length - 2)
+            |> StringLiteral
+                
         override __.Status = snd stateStatus
+        
         override __.Reset() = stateStatus <- ssNothing
+        
         override __.Feed(c) =
             let state = fst stateStatus
             stateStatus <-

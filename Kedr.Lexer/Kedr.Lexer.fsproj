@@ -1,14 +1,13 @@
-<Project Sdk="Microsoft.NET.Sdk">
+﻿<Project Sdk="Microsoft.NET.Sdk">
   <PropertyGroup>
-    <TargetFramework>net472</TargetFramework>
+    <TargetFramework>netstandard2.0</TargetFramework>
   </PropertyGroup>
   <ItemGroup>
     <Compile Include="Urils.fs" />
     <Compile Include="Token.fs" />
     <Compile Include="TokenParser.fs" />
-    <Compile Include="WhitespaceMatcher.fs" />
-    <Compile Include="NumberLiteralMatcher.fs" />
-    <Compile Include="StringLiteralMatcher.fs" />
+    <Compile Include="NumberParser.fs" />
+    <Compile Include="StringLiteralParser.fs" />
     <Compile Include="Parser.fs" />
   </ItemGroup>
 </Project>

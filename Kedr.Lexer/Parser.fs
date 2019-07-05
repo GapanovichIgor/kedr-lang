@@ -1,15 +1,14 @@
 module Kedr.Parser
 
+open Kedr
 open System
 open System.IO
 open System.Text
+open Utils
 
-open Kedr.Parser
-
-let private matchers : IMatcher list = [
-    WhitespaceMatcher()
-    NumberLiteralMatcher()
-    StringLiteralMatcher()
+let private getTokenParsers () : IParser<char, Token> list = [
+    NumberParser()
+    StringLiteralParser()
 ]
 
 type private Tape(stream : Stream, encoding : Encoding) =
@@ -20,9 +19,11 @@ type private Tape(stream : Stream, encoding : Encoding) =
     let mutable bufferLength = 0
     let mutable headPos = -1
 
-    member __.PeekLength = headPos - bufferStart + 1
+    member __.WindowLength =
+        assert (headPos >= bufferStart)
+        headPos - bufferStart + 1
 
-    member __.PeekNext() =
+    member __.GetNext() =
         headPos <- headPos + 1
         if headPos = bufferStart + bufferLength then
             let i = reader.Read()
@@ -47,79 +48,160 @@ type private Tape(stream : Stream, encoding : Encoding) =
             let c = buffer.[headPos]
             Some c
 
-    member __.RollbackAndConsume(n : int) : string =
-        let str = new String(buffer, bufferStart, n)
+    member this.RollbackAndConsume(n : int) : char[] =
+        assert (n <= bufferLength)
+        assert (bufferStart + n <= buffer.Length)
+        
+        let chars = buffer |> getSubArray bufferStart n
+        
+        this.RollbackAndSkip(n)
+        
+        chars
+        
+    member __.RollbackAndSkip(n : int) : unit =
+        assert (n <= bufferLength)
+        assert (bufferStart + n <= buffer.Length)
+        
         bufferStart <- bufferStart + n
+        bufferLength <- bufferLength - n
         headPos <- bufferStart - 1
-        str
-
-
-
-type TokenParseResult = Token of Token | Failure
-
-let parse (encoding : Encoding) (stream : Stream) : TokenParseResult seq =
+        
+let parse (encoding : Encoding) (stream : Stream) : Token list =
     let tape = new Tape(stream, encoding)
 
-    let mutable aliveMatchers = matchers
+    let allTokenParsers = getTokenParsers()
+    let mutable aliveTokenParsers = allTokenParsers
 
-    let mutable candidate : IMatcher option = None
+    let mutable candidate : IParser<char, Token> option = None
     let mutable candidateCharCount = 0
 
-    let rec getNextToken () =
-        let inline finishRound () =
-            match candidate with
-            | Some matcher ->
-                candidate <- None
-                aliveMatchers <- matchers
-
-                match matcher.Parser with
-                | Some parser ->
-                    let str = tape.RollbackAndConsume(candidateCharCount)
-                    let token = parser str
-                    Some (Token token)
-                | None -> getNextToken()
-            | None ->
-                match tape.PeekLength with
-                | 0 -> None
-                | _ -> Some Failure
-
-        let c = tape.PeekNext()
-
+    let tokens = new Collections.Generic.List<Token>()
+    
+    let mutable keepGoing = true
+    
+    let inline reset () =
+        candidate <- None
+        for parser in allTokenParsers do
+            parser.Reset()
+        aliveTokenParsers <- allTokenParsers
+        
+    let inline finishRound () =
+        match candidate with
+        | Some parser ->
+            let chars = tape.RollbackAndConsume(candidateCharCount)
+            parser.Parse(chars)
+            |> tokens.Add
+        | None ->
+            if tape.WindowLength > 0 then
+                // todo read invalid token until whitespace or eof
+                tape.RollbackAndConsume(tape.WindowLength)
+                |> String
+                |> InvalidToken
+                |> tokens.Add
+    
+    while keepGoing do
+        let c = tape.GetNext()
+        
         match c with
-        | None -> finishRound()
+        | None ->
+            finishRound()
+            keepGoing <- false
+        | Some (WhiteSpace _) ->
+            if tape.WindowLength > 1 then
+                finishRound()
+            tape.RollbackAndSkip(1)
         | Some c ->
-            for matcher in aliveMatchers do
+            for matcher in aliveTokenParsers do
                 matcher.Feed(c)
 
-            aliveMatchers <- aliveMatchers |> List.filter (fun m -> m.Status <> FailedMatch)
-
-            if aliveMatchers.Length = 0 then
+            aliveTokenParsers <- aliveTokenParsers |> List.filter (fun m -> m.Status <> FailedMatch)
+            
+            if aliveTokenParsers.Length = 0 then
                 finishRound()
+                reset()
             else
-                let newCandidates = aliveMatchers |> List.filter (fun p -> p.Status = CompleteMatch)
-                if newCandidates.Length > 1 then
-                    Some Failure
-                else
-                    if newCandidates.Length = 1 then
-                        candidate <- Some newCandidates.Head
-                        candidateCharCount <- tape.PeekLength
+                let newCandidates =
+                    aliveTokenParsers
+                    |> List.filter (fun p -> p.Status = CompleteMatch)
+                    
+                if newCandidates.Length > 1 then failwith "Ambiguous token"
+                
+                if newCandidates.Length = 1 then
+                    candidate <- Some newCandidates.Head
+                    candidateCharCount <- tape.WindowLength
+    
+    tokens |> List.ofSeq
 
-                    getNextToken()
+let private parseOld (encoding : Encoding) (stream : Stream) : Token list =
+    let tape = new Tape(stream, encoding)
 
-    let generate finished =
-        if finished then
-            None
-        else
-            match getNextToken() with
-            | Some result ->
-                match result with
-                | Token _ -> Some (result, false)
-                | Failure -> Some (result, true)
-            | None -> None
+    let allTokenParsers = getTokenParsers()
+    let mutable aliveTokenParsers = allTokenParsers
 
-    Seq.unfold generate false
+    let mutable candidate : IParser<char, Token> option = None
+    let mutable candidateCharCount = 0
 
-let parseString (str : string) : TokenParseResult seq =
+    let tokens = new Collections.Generic.List<Token>()
+
+    let rec loop () =
+        let finishRound finished =
+            let token = 
+                match candidate with
+                | Some parser ->
+                    let chars = tape.RollbackAndConsume(candidateCharCount)
+                    parser.Parse(chars)
+                    |> Some
+                | None ->
+                    match tape.WindowLength with
+                    | 0 -> None
+                    | _ ->
+                        tape.RollbackAndConsume(tape.WindowLength)
+                        |> String
+                        |> InvalidToken
+                        |> Some
+                            
+            match token with
+            | Some token -> tokens.Add(token)
+            | None -> ()
+                    
+            if not finished then
+                candidate <- None
+                for matcher in allTokenParsers do
+                    matcher.Reset()
+                aliveTokenParsers <- allTokenParsers
+                loop()
+
+        let c = tape.GetNext()
+
+        match c with
+        | None -> finishRound true
+        | Some c ->
+            for matcher in aliveTokenParsers do
+                matcher.Feed(c)
+
+            aliveTokenParsers <- aliveTokenParsers |> List.filter (fun m -> m.Status <> FailedMatch)
+
+            if aliveTokenParsers.Length = 0 then
+                finishRound false
+            else
+                let newCandidate =
+                    aliveTokenParsers
+                    |> Seq.filter (fun p -> p.Status = CompleteMatch)
+                    |> Seq.tryExactlyOne
+                
+                match newCandidate with
+                | Some newCandidate ->
+                    candidate <- Some newCandidate
+                    candidateCharCount <- tape.WindowLength
+                | None -> ()
+
+                loop()
+
+    loop()
+    
+    tokens |> List.ofSeq
+
+let parseString (str : string) : Token list =
     let encoding = Encoding.UTF8
     let ms = new MemoryStream(encoding.GetBytes str)
     parse encoding ms

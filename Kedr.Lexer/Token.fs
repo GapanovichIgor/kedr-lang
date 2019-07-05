@@ -1,5 +1,8 @@
-namespace Kedr.Parser
+namespace Kedr
 
 type Token =
-    | Number of string
+    | InvalidToken of string
+    | Minus
+    | Plus
+    | NumberLiteral of integerPart:int64 * fractionalPart: int64 option
     | StringLiteral of contents:string

@@ -7,10 +7,10 @@
 
   <ItemGroup>
     <Compile Include="Gen.fs" />
-    <Compile Include="Data\Whitespace.fs" />
-    <Compile Include="Data\DecimalNumberLiteral.fs" />
-    <Compile Include="Data\StringLiteral.fs" />
-    <Compile Include="Data\Token.fs" />
+    <Compile Include="Data\TestWhitespace.fs" />
+    <Compile Include="Data\TestNumber.fs" />
+    <Compile Include="Data\TestQuotedString.fs" />
+    <Compile Include="Data\TestAnyToken.fs" />
     <Compile Include="Setup.fs" />
     <Compile Include="Parser.Tests.fs" />
     <Compile Include="Main.fs" />

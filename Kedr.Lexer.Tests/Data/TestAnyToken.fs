@@ -2,7 +2,7 @@
 
 open FsCheck
 
-type Token private (token) =
+type TestAnyToken private (token) =
     member val private token = token
 
     member __.str =
@@ -18,23 +18,23 @@ type Token private (token) =
     static member generator = gen {
         let! token = Arb.generate<Token'>
 
-        return Token token
+        return TestAnyToken(token)
     }
 
-    static member shrink (value : Token) = seq {
+    static member shrink (value : TestAnyToken) = seq {
         match value.token with
         | DecimalNumber n ->
             yield!
-                DecimalNumberLiteral.shrink n
-                |> Seq.map (DecimalNumber >> Token)
+                TestNumber.shrink n
+                |> Seq.map (DecimalNumber >> TestAnyToken)
         | StringLiteral s ->
             yield!
-                StringLiteral.shrink s
-                |> Seq.map (StringLiteral >> Token)
+                TestQuotedString.shrink s
+                |> Seq.map (StringLiteral >> TestAnyToken)
     }
 
-    static member arb = Arb.fromGenShrink (Token.generator, Token.shrink)
+    static member arb = Arb.fromGenShrink (TestAnyToken.generator, TestAnyToken.shrink)
 
 and private Token' =
-    | DecimalNumber of DecimalNumberLiteral
-    | StringLiteral of StringLiteral
+    | DecimalNumber of TestNumber
+    | StringLiteral of TestQuotedString

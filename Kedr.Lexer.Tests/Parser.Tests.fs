@@ -1,41 +1,68 @@
 module Kedr.Lexer.Tests.ParserTests
 
 open Expecto
+open Kedr
 open Kedr.Parser
 open Kedr.Lexer.Tests.Setup
-type Token = Kedr.Lexer.Tests.Token
 
-let private parse = fun source -> parseString source |> List.ofSeq
+let private parse = fun source -> parseString source
 
 [<Tests>]
 let tests =
     testList "properties" [
         "decimal number literal is parsed back to itself" :=
-            fun (decNum : DecimalNumberLiteral) ->
-                parse !decNum = Ok [ Number !decNum ]
+            fun (decNum : TestNumber) ->
+                parse !decNum = [ NumberLiteral (decNum.integerPart, decNum.fractionalPart) ]
 
         "string literal is parsed back to its contents" :=
-            fun (strLit : StringLiteral) ->
-                let t1 = parse !strLit
-                let t2 = parse !strLit = Ok [ StringLiteral strLit.contents ]
+            fun (strLit : TestQuotedString) ->
+                parse !strLit = [ StringLiteral strLit.contents ]
 
-                if not t2 then
-                    ()
+//        "whitespace is separator" :=
+//            fun () ->
+//                let token1 = DecimalNumberLiteral(false, ) 
+//                
+//                parse (!token1 + !ws + !token2) = (parse !token1) ++ (parse !token2)
+//                &&
+//                parse (!token1 + !token2) <> (parse !token1) ++ (parse !token2)
+//        "whitespace is separator" :=
+//            fun () ->
+//                let token1 = TestNumberLiteral("8", "6")
+//                let token2 = TestStringLiteral("")
+//                let ws = TestWhitespace("\t")
+////                let t = parse !token1
+////                let t2 = parse !token2
+//                let t3 = parse (!token1 + !token2)
+//                false
+                
+//        "whitespace is separator" :=
+//            fun (token1 : TestToken) (ws : TestWhitespace) (token2 : TestToken) ->
+//                parse (!token1 + !ws + !token2) = (parse !token1) ++ (parse !token2)
+//                &&
+//                parse (!token1 + !token2) <> (parse !token1) ++ (parse !token2)
 
-                parse !strLit = Ok [ StringLiteral strLit.contents ]
-
-        "whitespace is separator" :=
-            fun (token1 : Token) (ws : Whitespace) (token2 : Token) ->
-                parse (!token1 + !ws + !token2) = (parse !token1) ++ (parse !token2)
+        "whitespace is not a token" :=
+            fun (ws : TestWhitespace) ->
+                parse !ws = []
+        
+        "whitespace identity" :=
+            fun (ws : TestWhitespace) (token : TestAnyToken) ->
+                parse (!ws + !token) = parse !token
                 &&
-                parse (!token1 + !token2) <> (parse !token1) ++ (parse !token2)
-
-        "whitespace left identity" :=
-            fun (ws : Whitespace) (token : Token) ->
-                parse (!ws + !token) = (parse !token)
-
-        "whitespace right identity" :=
-            fun (token : Token) (ws : Whitespace) ->
-                let t = parse (!token + !ws)
-                parse (!token + !ws) = (parse !token)
+                parse (!token + !ws) = parse !token
+                
+        "parsing token concatenation = parsing one by one" :=
+            fun (ws : TestWhitespace) (tokens : TestAnyToken list) ->
+                let tokenStrs = tokens |> List.map toStr
+                
+                let parsedTogether =
+                    tokenStrs
+                    |> String.concat !ws
+                    |> parse
+                
+                let parsedIndividually =
+                    tokenStrs
+                    |> List.collect parse
+                    
+                parsedTogether = parsedIndividually
     ]

@@ -1,9 +1,10 @@
-namespace Kedr.Parser
+namespace Kedr
+open System
 
 type internal MatcherStatus = Initial | PartialMatch | CompleteMatch | FailedMatch
 
-type internal IMatcher =
+type internal IParser<'i, 'o> =
     abstract Status : MatcherStatus
-    abstract Feed : char -> unit
-    abstract Parser : (string -> Token) option
+    abstract Feed : 'i -> unit
+    abstract Parse : 'i array -> 'o
     abstract Reset : unit -> unit
