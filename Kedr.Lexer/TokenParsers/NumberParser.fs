@@ -8,7 +8,6 @@ open Kedr.Utils
 type private NumberParserState = Nothing | AtIntegerPart | AtEmptyFractionalPart | AtFractionalPart
 
 type internal NumberParser() =
-
     let ssNothing = (Nothing, Initial)
     let ssAtIntegerPart = (AtIntegerPart, CompleteMatch)
     let ssAtEmptyFractionalPart = (AtEmptyFractionalPart, PartialMatch)
@@ -39,16 +38,18 @@ type internal NumberParser() =
                     |> String
                     |> Int64.Parse
                     
-                NumberLiteral (integerPart, (Some fractionalPart))
+                Number (integerPart, (Some fractionalPart))
             else
                 let integerPart =
                     chars
                     |> String
                     |> Int64.Parse
                     
-                NumberLiteral (integerPart, None)
+                Number (integerPart, None)
                 
         override __.Feed(c : char) =
+            assert(snd stateStatus <> FailedMatch)
+            
             let state = fst stateStatus
             stateStatus <-
                 match state with

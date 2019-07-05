@@ -2,7 +2,7 @@ module Kedr.Lexer.Tests.ParserTests
 
 open Expecto
 open Kedr
-open Kedr.Parser
+open Kedr.Tokenizer
 open Kedr.Lexer.Tests.Setup
 
 let private parse = fun source -> parseString source
@@ -12,11 +12,11 @@ let tests =
     testList "properties" [
         "decimal number literal is parsed back to itself" :=
             fun (decNum : TestNumber) ->
-                parse !decNum = [ NumberLiteral (decNum.integerPart, decNum.fractionalPart) ]
+                parse !decNum = [ Number (decNum.integerPart, decNum.fractionalPart) ]
 
         "string literal is parsed back to its contents" :=
             fun (strLit : TestQuotedString) ->
-                parse !strLit = [ StringLiteral strLit.contents ]
+                parse !strLit = [ QuotedString strLit.contents ]
 
 //        "whitespace is separator" :=
 //            fun () ->
@@ -43,26 +43,27 @@ let tests =
 
         "whitespace is not a token" :=
             fun (ws : TestWhitespace) ->
+                let t = parse !ws 
                 parse !ws = []
         
-        "whitespace identity" :=
-            fun (ws : TestWhitespace) (token : TestAnyToken) ->
-                parse (!ws + !token) = parse !token
-                &&
-                parse (!token + !ws) = parse !token
-                
-        "parsing token concatenation = parsing one by one" :=
-            fun (ws : TestWhitespace) (tokens : TestAnyToken list) ->
-                let tokenStrs = tokens |> List.map toStr
-                
-                let parsedTogether =
-                    tokenStrs
-                    |> String.concat !ws
-                    |> parse
-                
-                let parsedIndividually =
-                    tokenStrs
-                    |> List.collect parse
-                    
-                parsedTogether = parsedIndividually
+//        "whitespace identity" :=
+//            fun (ws : TestWhitespace) (token : TestAnyToken) ->
+//                parse (!ws + !token) = parse !token
+//                &&
+//                parse (!token + !ws) = parse !token
+//                
+//        "parsing token concatenation = parsing one by one" :=
+//            fun (ws : TestWhitespace) (tokens : TestAnyToken list) ->
+//                let tokenStrs = tokens |> List.map toStr
+//                
+//                let parsedTogether =
+//                    tokenStrs
+//                    |> String.concat !ws
+//                    |> parse
+//                
+//                let parsedIndividually =
+//                    tokenStrs
+//                    |> List.collect parse
+//                    
+//                parsedTogether = parsedIndividually
     ]

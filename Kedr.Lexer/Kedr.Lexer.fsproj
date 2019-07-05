@@ -1,13 +1,17 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
   <PropertyGroup>
     <TargetFramework>netstandard2.0</TargetFramework>
+    <RootNamespace>Kedr</RootNamespace>
   </PropertyGroup>
   <ItemGroup>
     <Compile Include="Urils.fs" />
     <Compile Include="Token.fs" />
-    <Compile Include="TokenParser.fs" />
-    <Compile Include="NumberParser.fs" />
-    <Compile Include="StringLiteralParser.fs" />
-    <Compile Include="Parser.fs" />
+    <Compile Include="IParser.fs" />
+    <Compile Include="TokenParsers\NumberParser.fs" />
+    <Compile Include="TokenParsers\QuotedStringParser.fs" />
+    <Compile Include="Combinators\LongestWinsCombinator.fs" />
+    <Compile Include="Combinators\LeftSkipCombinator.fs" />
+    <Compile Include="Tape.fs" />
+    <Compile Include="Tokenizer.fs" />
   </ItemGroup>
 </Project>
