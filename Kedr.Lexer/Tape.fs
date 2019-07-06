@@ -1,66 +1,84 @@
 namespace Kedr
 open System
-open System.IO
-open System.Text
-
 open Utils
 
-type private Tape(stream : Stream, encoding : Encoding) =
-    let reader = new StreamReader(stream, encoding)
+type internal Tape<'a>(getNext: unit -> 'a option) =
 
-    let mutable buffer = Array.zeroCreate<char>(4096)
-    let mutable bufferStart = 0
-    let mutable bufferLength = 0
+    let mutable buffer = Array.zeroCreate<'a> (4096)
+    let mutable windowStart = 0
+    let mutable windowEnd = 0
     let mutable headPos = -1
+    let mutable eos = false
 
-    member __.WindowLength =
-        assert (headPos >= bufferStart)
-        headPos - bufferStart + 1
-        
-    member __.EndReached =
-        bufferLength = 0 && reader.EndOfStream
+    let allocate count =
+        assert (count >= 0)
 
-    member this.GetNext() =
-        assert (not this.EndReached)
-        
-        headPos <- headPos + 1
-        if headPos = bufferStart + bufferLength then
-            let i = reader.Read()
-            if i = -1 then
-                None
-            else
-                let c = char i
+        let windowLength = windowEnd - windowStart + 1
 
-                if bufferStart + bufferLength = buffer.Length then
-                    if bufferStart > 0 then
-                        Array.Copy(buffer, bufferStart, buffer, 0, bufferLength)
-                    else
-                        let newBuffer = Array.zeroCreate<char>(buffer.Length * 2)
-                        Array.Copy(buffer, bufferStart, newBuffer, 0, bufferLength)
-                        buffer <- newBuffer
-
-                bufferLength <- bufferLength + 1
-                buffer.[headPos] <- c
-
-                Some c
+        if windowStart >= count then
+            Array.Copy(buffer, windowStart, buffer, 0, windowLength)
+            headPos <- headPos - windowStart
+            windowEnd <- windowEnd - windowStart
+            windowStart <- 0
         else
-            let c = buffer.[headPos]
-            Some c
+            let newLength = Math.Max(buffer.Length * 2, buffer.Length + count)
+            let newBuffer = Array.zeroCreate<'a> (newLength)
+            Array.Copy(buffer, windowStart, newBuffer, 0, windowLength)
+            buffer <- newBuffer
 
-    member this.RollbackAndConsume(n : int) : char[] =
-        assert (n <= bufferLength)
-        assert (bufferStart + n <= buffer.Length)
-        
-        let chars = buffer |> getSubArray bufferStart n
-        
-        this.RollbackAndSkip(n)
-        
-        chars
-        
-    member __.RollbackAndSkip(n : int) : unit =
-        assert (n <= bufferLength)
-        assert (bufferStart + n <= buffer.Length)
-        
-        bufferStart <- bufferStart + n
-        bufferLength <- bufferLength - n
-        headPos <- bufferStart - 1
+    let tryRead count =
+        assert (count >= 0)
+
+        if eos then
+            0
+        else
+            let bufferLengthIncrease = windowEnd + count - buffer.Length
+            if bufferLengthIncrease > 0 then
+                allocate bufferLengthIncrease
+
+            let mutable i = 0
+            while not eos && i < count do
+                match getNext() with
+                | Some item ->
+                    buffer.[windowEnd] <- item
+                    windowEnd <- windowEnd + 1
+                    i <- i + 1
+                | None ->
+                    eos <- true
+
+            i
+
+    member __.Current: 'a option =
+        assert (headPos >= windowStart)
+        assert (headPos <= windowEnd)
+
+        let missingItemCount = headPos - windowEnd + 1
+
+        if missingItemCount > 0 && tryRead missingItemCount <> missingItemCount then
+            None
+        else
+            buffer.[headPos]
+            |> Some
+
+    member __.MoveNext(): unit =
+        headPos <- headPos + 1
+
+    member __.Backtrack(count) =
+        assert (count > 0)
+        headPos <- headPos - count
+        assert (headPos >= windowStart - 1)
+
+    member __.Consume(count): 'a array =
+        assert (count > 0)
+
+        let result = buffer |> getSubArray (headPos + 1) count
+
+        headPos <- headPos + count
+        assert (headPos <= windowEnd)
+
+        result
+
+    member __.Commit(count): unit =
+        assert(count >= 0)
+        windowStart <- windowStart + count
+        assert(windowStart <= windowEnd)
