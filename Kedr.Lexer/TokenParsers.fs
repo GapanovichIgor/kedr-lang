@@ -6,7 +6,7 @@ open WhiteSpace
 
 let private parseResultMapConst x = ParseResult.map (fun _ -> x)
 
-let private charToken c t = skipOne c >> parseResultMapConst t 
+let private charToken c t = skipOne c >> parseResultMapConst t
 
 let quotedString: Parser<char, Token> =
     (skipOne '"' >>. zeroOrMoreAnyWithTerminator '"')
@@ -25,8 +25,12 @@ let number: Parser<char, Token> =
     >> ParseResult.map makeToken
 
 let plus: Parser<char, Token> = charToken '+' Plus
-    
+
 let minus: Parser<char, Token> = charToken '-' Minus
+
+let asterisk: Parser<char, Token> = charToken '*' Asterisk
+
+let slash: Parser<char, Token> = charToken '/' Slash
 
 let invalidToken: Parser<char, Token> =
     oneOrMoreCond (not << isWhiteSpace)

@@ -11,6 +11,8 @@ type TestAnyToken private (token) =
         | StringLiteral s -> s.str
         | Plus -> "+"
         | Minus -> "-"
+        | Asterisk -> "*"
+        | Slash -> "/"
 
     override this.ToString() = this.str
 
@@ -30,8 +32,10 @@ type TestAnyToken private (token) =
             yield!
                 TestQuotedString.shrink s
                 |> Seq.map (StringLiteral >> TestAnyToken)
-        | Plus -> ()
-        | Minus -> ()
+        | Plus
+        | Minus
+        | Asterisk
+        | Slash -> ()
     }
 
     static member arb = Arb.fromGenShrink (TestAnyToken.generator, TestAnyToken.shrink)
@@ -41,3 +45,5 @@ and private Token' =
     | StringLiteral of TestQuotedString
     | Plus
     | Minus
+    | Asterisk
+    | Slash

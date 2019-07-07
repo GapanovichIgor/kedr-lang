@@ -20,9 +20,15 @@ let tests =
 
         "plus is parsed as such" :=
             fun () -> parse "+" = [ Plus ]
-            
+
         "minus is parsed as such" :=
             fun () -> parse "-" = [ Minus ]
+
+        "asterisk is parsed as such" :=
+            fun () -> parse "*" = [ Asterisk ]
+
+        "slash is parsed as such" :=
+            fun () -> parse "/" = [ Slash ]
 
         "whitespace is not a token" :=
             fun (ws: TestWhitespace) ->
