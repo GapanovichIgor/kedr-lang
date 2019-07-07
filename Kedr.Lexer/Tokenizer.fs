@@ -9,8 +9,6 @@ open ParserPrimitives
 open TokenParsers
 open WhiteSpace
 
-
-
 let private parseReader (reader: StreamReader) =
     let readChar() =
         let i = reader.Read()
@@ -32,6 +30,7 @@ let private parseReader (reader: StreamReader) =
             notEquals
             parenOpen
             parenClose
+            identifier
             number
             quotedString
         ]

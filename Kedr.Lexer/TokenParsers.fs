@@ -4,9 +4,11 @@ open ParserPrimitives
 open ParserComposition
 open WhiteSpace
 
+type private TokenParser = Parser<char, Token>
+
 let private parseResultMapConst x = ParseResult.map (fun _ -> x)
 
-let private constToken (str: string) t =
+let private constToken (str: string) t: TokenParser =
     assert (str.Length > 0)
 
     let parser =
@@ -19,11 +21,11 @@ let private constToken (str: string) t =
 
     parser >> parseResultMapConst t
 
-let quotedString: Parser<char, Token> =
+let quotedString: TokenParser =
     (skipOne '"' >>. zeroOrMoreAnyWithTerminator '"')
     >> ParseResult.map (String >> QuotedString)
 
-let number: Parser<char, Token> =
+let number: TokenParser =
     let integerPart = oneOrMoreCond Char.IsDigit
     let fractionalPart = optional (skipOne '.' >>. oneOrMoreCond Char.IsDigit)
 
@@ -35,22 +37,43 @@ let number: Parser<char, Token> =
     integerPart .>>. fractionalPart
     >> ParseResult.map makeToken
 
-let plus: Parser<char, Token> = constToken "+" Plus
+let identifier: TokenParser =
+    let firstCharCond c =
+        Char.IsLetter c ||
+        c = '_'
 
-let minus: Parser<char, Token> = constToken "-" Minus
+    let followingCharCond c =
+        Char.IsLetter c ||
+        c = '_'
+        
+    let makeToken (firstChar : char, followingChars : char array) =
+        let result = Array.zeroCreate<char> (followingChars.Length + 1)
+        result.[0] <- firstChar
+        for i = 0 to followingChars.Length - 1 do
+            result.[i + 1] <- followingChars.[i]
+        result
+        |> String
+        |> Identifier
 
-let asterisk: Parser<char, Token> = constToken "*" Asterisk
+    oneCond firstCharCond .>>. zeroOrMoreCond followingCharCond
+    >> ParseResult.map makeToken
 
-let slash: Parser<char, Token> = constToken "/" Slash
+let plus: TokenParser = constToken "+" Plus
 
-let equals: Parser<char, Token> = constToken "=" Equals
+let minus: TokenParser = constToken "-" Minus
 
-let notEquals: Parser<char, Token> = constToken "/=" NotEquals
+let asterisk: TokenParser = constToken "*" Asterisk
 
-let parenOpen: Parser<char, Token> = constToken "(" ParenOpen
+let slash: TokenParser = constToken "/" Slash
 
-let parenClose: Parser<char, Token> = constToken ")" ParenClose
+let equals: TokenParser = constToken "=" Equals
 
-let invalidToken: Parser<char, Token> =
+let notEquals: TokenParser = constToken "/=" NotEquals
+
+let parenOpen: TokenParser = constToken "(" ParenOpen
+
+let parenClose: TokenParser = constToken ")" ParenClose
+
+let invalidToken: TokenParser =
     oneOrMoreCond (not << isWhiteSpace)
     >> ParseResult.map (String >> InvalidToken)

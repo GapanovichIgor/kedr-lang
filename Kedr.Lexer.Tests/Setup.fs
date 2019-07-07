@@ -6,6 +6,7 @@ type Arbs =
     static member Whitespace () = TestWhitespace.arb
     static member Number () = TestNumber.arb
     static member QuotedString () = TestQuotedString.arb
+    static member Identifier () = TestIdentifier.arb
     static member AnyToken () = TestAnyToken.arb
 
 let inline (++) res1 res2 =

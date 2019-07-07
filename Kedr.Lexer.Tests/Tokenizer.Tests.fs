@@ -18,6 +18,10 @@ let tests =
             fun (strLit: TestQuotedString) ->
                 parse !strLit = [ QuotedString strLit.contents ]
 
+        "identifier is parsed as such" :=
+            fun (identifier: TestIdentifier) ->
+                parse !identifier = [ Identifier !identifier ]
+
         "plus is parsed as such" :=
             parse "+" = [ Plus ]
 

@@ -2,6 +2,14 @@ module internal Kedr.ParserPrimitives
 
 open ParserComposition
 
+let oneCond<'i> (cond: 'i -> bool) (tape: Tape<'i>): ParseResult<'i> =
+   tape.MoveNext()
+   match tape.Current with
+   | Some i when cond i -> Ok { value = i; length = 1 }
+   | _ ->
+       tape.MoveBack(1)
+       Error()
+
 let skipAny<'i> (count: int) (tape: Tape<'i>): ParseResult<unit> =
     assert (count > 0)
 
@@ -38,7 +46,7 @@ let zeroOrMoreCond<'i> (cond: 'i -> bool) (tape: Tape<'i>): ParseResult<'i array
             tape.MoveBack(advanceCount)
             let items = tape.Consume(advanceCount - 1)
             Ok { value = items; length = items.Length }
-    
+
     loop 0
 
 let skipZeroOrMoreCond<'i> (pred: 'i -> bool) (tape: Tape<'i>): ParseResult<unit> =
@@ -71,7 +79,7 @@ let oneOrMoreCond<'i> (cond: 'i -> bool) (tape: Tape<'i>): ParseResult<'i array>
 
     loop 0
 
-let zeroOrMoreAnyWithTerminator<'i when 'i: equality> (terminator: 'i) : Parser<'i, 'i array> =
+let zeroOrMoreAnyWithTerminator<'i when 'i: equality> (terminator: 'i): Parser<'i, 'i array> =
     zeroOrMoreCond ((<>) terminator)
     .>>
     skipOne terminator
