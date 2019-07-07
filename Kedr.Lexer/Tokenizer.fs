@@ -4,14 +4,12 @@ open Kedr
 open System.IO
 open System.Text
 
-open System.Collections.Generic
 open ParserComposition
 open ParserPrimitives
 open TokenParsers
+open WhiteSpace
 
-let private skipWhitespace =
-    let whitespace = [ ' '; '\t' ] |> HashSet
-    skipWhile whitespace.Contains
+let private skipWhitespace = skipZeroOrMoreCond isWhiteSpace
 
 let private parseReader (reader: StreamReader) =
     let readChar() =
@@ -22,21 +20,26 @@ let private parseReader (reader: StreamReader) =
 
     let tape = Tape(readChar)
 
-    let parser =
+    let lineParser =
         zeroOrMore (
             (skipWhitespace |> commitOnSuccess)
             >>.
             (chooseLongest [
                 number
                 quotedString
-            ] |> commitOnSuccess)
+            ]
+            |> orElse invalidToken
+            |> commitOnSuccess)
             .>>
             (skipWhitespace |> commitOnSuccess)
         )
 
+    let parser = lineParser
+
     match parser tape with
     | Ok ok -> ok.value
     | Error _ -> []
+
 
 let parse (stream: Stream): Token list =
     let reader = new StreamReader(stream)

@@ -1,17 +1,21 @@
 module internal Kedr.ParserComposition
 
+let inline private combine valueSelector p1 p2 =
+    fun tape ->
+        p1 tape |> Result.bind (fun ok1 ->
+            p2 tape |> Result.bind (fun ok2 ->
+                { value = valueSelector (ok1.value, ok2.value)
+                  length = ok1.length + ok2.length }
+                |> Ok))
+
 let (>>.) (p1: Parser<'i, _>) (p2: Parser<'i, 'o>): Parser<'i, 'o> =
-    fun tape -> p1 tape |> Result.bind (fun _ -> p2 tape)
+    combine snd p1 p2
 
 let (.>>) (p1: Parser<'i, 'o>) (p2: Parser<'i, _>): Parser<'i, 'o> =
-    fun tape -> p1 tape |> Result.bind (fun x -> p2 tape |> Result.map (fun _ -> x))
+    combine fst p1 p2
 
-let combine (p2: Parser<'i, 'o2>) (combineOutput: 'o1 -> 'o2 -> 'o) (p1: Parser<'i, 'o1>): Parser<'i, 'o> =
-    fun tape ->
-        p1 tape |> Result.bind (fun o1 ->
-            p2 tape |> Result.map (fun o2 ->
-                { value = combineOutput o1.value o2.value
-                  length = o1.length + o2.length }))
+let (.>>.) (p1: Parser<'i, 'o1>) (p2: Parser<'i, 'o2>): Parser<'i, 'o1 * 'o2> =
+    combine id p1 p2
 
 let chooseLongest (parsers: Parser<'i, 'o> list): Parser<'i, 'o> =
     let combine r1 r2 =
@@ -55,6 +59,12 @@ let zeroOrMore (parser: Parser<'i, 'o>): Parser<'i, 'o list> =
         { value = results |> List.map (fun s -> s.value)
           length = results |> List.sumBy (fun s -> s.length) }
         |> Ok
+        
+let orElse (fallbackParser : Parser<'i, 'o>) (mainParser: Parser<'i, 'o>) : Parser<'i, 'o> =
+    fun tape ->
+        match mainParser tape with
+        | Error _ -> fallbackParser tape
+        | r -> r
 
 let commitOnSuccess (parser: Parser<'i, 'o>): Parser<'i, 'o> =
     fun tape ->

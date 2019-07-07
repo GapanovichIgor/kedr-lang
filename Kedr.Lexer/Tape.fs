@@ -49,14 +49,14 @@ type internal Tape<'a>(getNext: unit -> 'a option) =
             i
 
     member __.Current: 'a option =
-        assert (headPos >= windowStart)
-        assert (headPos <= windowEnd)
 
         let missingItemCount = headPos - windowEnd + 1
 
         if missingItemCount > 0 && tryRead missingItemCount <> missingItemCount then
             None
         else
+            assert (headPos >= windowStart)
+            assert (headPos <= windowEnd)
             buffer.[headPos]
             |> Some
 
@@ -69,7 +69,7 @@ type internal Tape<'a>(getNext: unit -> 'a option) =
         assert (headPos >= windowStart - 1)
 
     member __.Consume(count): 'a array =
-        assert (count > 0)
+        assert (count >= 0)
 
         let result = buffer |> getSubArray (headPos + 1) count
 
@@ -79,6 +79,6 @@ type internal Tape<'a>(getNext: unit -> 'a option) =
         result
 
     member __.Commit(count): unit =
-        assert(count >= 0)
+        assert (count >= 0)
         windowStart <- windowStart + count
-        assert(windowStart <= windowEnd)
+        assert (windowStart <= windowEnd)

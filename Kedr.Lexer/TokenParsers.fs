@@ -2,20 +2,25 @@ module internal Kedr.TokenParsers
 open System
 open ParserPrimitives
 open ParserComposition
+open WhiteSpace
 
-let quotedString tape : ParseResult<Token> =
-    tape
-    |> (skip '"' >>. anyWithTerminator '"')
-    |> ParseResult.map (String >> QuotedString)
+let quotedString : Parser<char, Token> =
+    (skipOne '"' >>. zeroOrMoreAnyWithTerminator '"')
+    >> ParseResult.map (String >> QuotedString)
 
 
-let number tape : ParseResult<Token> =
-    let parse =
-        takeWhile Char.IsDigit
-        |> combine (optional (skip '.' >>. takeWhile Char.IsDigit))
-            (fun integerPart fractionalPart ->
-                let integerPart = integerPart |> String |> Int64.Parse
-                let fractionalPart = fractionalPart |> Option.map (String >> Int64.Parse)
-                Number (integerPart, fractionalPart))
-            
-    parse tape
+let number : Parser<char, Token> =
+    let integerPart = oneOrMoreCond Char.IsDigit
+    let fractionalPart = optional (skipOne '.' >>. oneOrMoreCond Char.IsDigit) 
+    
+    let makeToken (integerPart : char array, fractionalPart : char array option) =
+        let integerPart = integerPart |> String |> Int64.Parse
+        let fractionalPart = fractionalPart |> Option.map (String >> Int64.Parse)
+        Number (integerPart, fractionalPart)
+        
+    integerPart .>>. fractionalPart
+    >> ParseResult.map makeToken
+    
+let invalidToken : Parser<char, Token> =
+    oneOrMoreCond (not << isWhiteSpace)
+    >> ParseResult.map (String >> InvalidToken)

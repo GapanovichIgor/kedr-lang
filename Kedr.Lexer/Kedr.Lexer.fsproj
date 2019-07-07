@@ -10,6 +10,7 @@
     <Compile Include="Parser.fs" />
     <Compile Include="ParserComposition.fs" />
     <Compile Include="ParserPrimitives.fs" />
+    <Compile Include="WhiteSpace.fs" />
     <Compile Include="TokenParsers.fs" />
     <Compile Include="Tokenizer.fs" />
   </ItemGroup>

@@ -10,11 +10,11 @@ let private parse = fun source -> parseString source
 [<Tests>]
 let tests =
     testList "properties" [
-        "decimal number literal is parsed back to itself" :=
-            fun (decNum : TestNumber) ->
-                parse !decNum = [ Number (decNum.integerPart, decNum.fractionalPart) ]
+        "number is parsed as such" :=
+            fun (number : TestNumber) ->
+                parse !number = [ Number (number.integerPart, number.fractionalPart) ]
 
-        "string literal is parsed back to its contents" :=
+        "quoted string is parsed as such" :=
             fun (strLit : TestQuotedString) ->
                 parse !strLit = [ QuotedString strLit.contents ]
 
@@ -42,4 +42,8 @@ let tests =
                     |> List.collect parse
                     
                 parsedTogether = parsedIndividually
+                
+        "invalid token is parsed as such" :=
+            fun () ->
+                parse "." = [ InvalidToken "." ]
     ]
