@@ -30,6 +30,8 @@ let private parseReader (reader: StreamReader) =
             slash
             equals
             notEquals
+            parenOpen
+            parenClose
             number
             quotedString
         ]

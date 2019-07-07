@@ -15,6 +15,8 @@ type TestAnyToken private (token) =
         | Slash -> "/"
         | Equals -> "="
         | NotEquals -> "/="
+        | ParenOpen -> "("
+        | ParenClose -> ")"
 
     override this.ToString() = this.str
 
@@ -39,6 +41,8 @@ type TestAnyToken private (token) =
         | Asterisk
         | Slash
         | Equals
+        | ParenOpen
+        | ParenClose
         | NotEquals -> ()
     }
 
@@ -52,4 +56,6 @@ and private Token' =
     | Asterisk
     | Slash
     | Equals
+    | ParenOpen
+    | ParenClose
     | NotEquals

@@ -36,6 +36,12 @@ let tests =
         "not equals is parsed as such" :=
             parse "/=" = [ NotEquals ]
 
+        "opening parenthesis is parsed as such" :=
+            parse "(" = [ ParenOpen ]
+
+        "closing parenthesis is parsed as such" :=
+            parse ")" = [ ParenClose ]
+
         "whitespace is not a token" :=
             fun (ws: TestWhitespace) ->
                 parse !ws = []
