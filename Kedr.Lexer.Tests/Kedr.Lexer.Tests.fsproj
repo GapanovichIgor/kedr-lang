@@ -12,7 +12,7 @@
     <Compile Include="Data\TestQuotedString.fs" />
     <Compile Include="Data\TestAnyToken.fs" />
     <Compile Include="Setup.fs" />
-    <Compile Include="Parser.Tests.fs" />
+    <Compile Include="Tokenizer.Tests.fs" />
     <Compile Include="Main.fs" />
   </ItemGroup>
 

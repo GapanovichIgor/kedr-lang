@@ -19,17 +19,18 @@ let private parseReader (reader: StreamReader) =
         else Some(char i)
 
     let tape = Tape(readChar)
-    
+
     let skipWhitespace = skipZeroOrMoreCond isWhiteSpace |> commitOnSuccess
-    
+
     let parseToken =
         chooseLongest [
+            plus
             number
             quotedString
         ]
         |> orElse invalidToken
         |> commitOnSuccess
-        
+
     let parseLine =
         zeroOrMore (skipWhitespace >>. parseToken .>> skipWhitespace)
 

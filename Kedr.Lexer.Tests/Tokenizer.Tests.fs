@@ -1,4 +1,4 @@
-module Kedr.Lexer.Tests.ParserTests
+module Kedr.Lexer.Tests.TokenizerTests
 
 open Expecto
 open Kedr
@@ -9,7 +9,7 @@ let private parse = fun source -> parseString source
 
 [<Tests>]
 let tests =
-    testList "properties" [
+    testList "tokenizer properties" [
         "number is parsed as such" :=
             fun (number : TestNumber) ->
                 parse !number = [ Number (number.integerPart, number.fractionalPart) ]
@@ -17,6 +17,10 @@ let tests =
         "quoted string is parsed as such" :=
             fun (strLit : TestQuotedString) ->
                 parse !strLit = [ QuotedString strLit.contents ]
+                
+        "plus is parsed as such" :=
+            fun () ->
+                parse "+" = [ Plus ]
 
         "whitespace is not a token" :=
             fun (ws : TestWhitespace) ->
