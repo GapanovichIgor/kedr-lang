@@ -11,42 +11,44 @@ let private parse = fun source -> parseString source
 let tests =
     testList "tokenizer properties" [
         "number is parsed as such" :=
-            fun (number : TestNumber) ->
-                parse !number = [ Number (number.integerPart, number.fractionalPart) ]
+            fun (number: TestNumber) ->
+                parse !number = [ Number(number.integerPart, number.fractionalPart) ]
 
         "quoted string is parsed as such" :=
-            fun (strLit : TestQuotedString) ->
+            fun (strLit: TestQuotedString) ->
                 parse !strLit = [ QuotedString strLit.contents ]
-                
+
         "plus is parsed as such" :=
-            fun () ->
-                parse "+" = [ Plus ]
+            fun () -> parse "+" = [ Plus ]
+            
+        "minus is parsed as such" :=
+            fun () -> parse "-" = [ Minus ]
 
         "whitespace is not a token" :=
-            fun (ws : TestWhitespace) ->
+            fun (ws: TestWhitespace) ->
                 parse !ws = []
-        
+
         "whitespace identity" :=
-            fun (ws : TestWhitespace) (token : TestAnyToken) ->
+            fun (ws: TestWhitespace) (token: TestAnyToken) ->
                 parse (!ws + !token) = parse !token
                 &&
                 parse (!token + !ws) = parse !token
-                
+
         "parsing token concatenation = parsing one by one" :=
-            fun (ws : TestWhitespace) (tokens : TestAnyToken list) ->
+            fun (ws: TestWhitespace) (tokens: TestAnyToken list) ->
                 let tokenStrs = tokens |> List.map toStr
-                
+
                 let parsedTogether =
                     tokenStrs
                     |> String.concat !ws
                     |> parse
-                
+
                 let parsedIndividually =
                     tokenStrs
                     |> List.collect parse
-                    
+
                 parsedTogether = parsedIndividually
-                
+
         "invalid token is parsed as such" :=
             fun () ->
                 parse "." = [ InvalidToken "." ]

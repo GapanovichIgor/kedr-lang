@@ -10,12 +10,9 @@ type TestAnyToken private (token) =
         | DecimalNumber n -> n.str
         | StringLiteral s -> s.str
         | Plus -> "+"
+        | Minus -> "-"
 
-    override this.ToString() =
-        match token with
-        | DecimalNumber n -> n.ToString()
-        | StringLiteral s -> s.ToString()
-        | Plus -> "+"
+    override this.ToString() = this.str
 
     static member generator = gen {
         let! token = Arb.generate<Token'>
@@ -33,7 +30,8 @@ type TestAnyToken private (token) =
             yield!
                 TestQuotedString.shrink s
                 |> Seq.map (StringLiteral >> TestAnyToken)
-        | Plus -> () 
+        | Plus -> ()
+        | Minus -> ()
     }
 
     static member arb = Arb.fromGenShrink (TestAnyToken.generator, TestAnyToken.shrink)
@@ -42,3 +40,4 @@ and private Token' =
     | DecimalNumber of TestNumber
     | StringLiteral of TestQuotedString
     | Plus
+    | Minus

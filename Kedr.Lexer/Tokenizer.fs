@@ -25,6 +25,7 @@ let private parseReader (reader: StreamReader) =
     let parseToken =
         chooseLongest [
             plus
+            minus
             number
             quotedString
         ]
