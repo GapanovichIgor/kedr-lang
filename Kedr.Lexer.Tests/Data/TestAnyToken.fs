@@ -10,6 +10,8 @@ type TestAnyToken private (token) =
         | DecimalNumber n -> n.str
         | StringLiteral s -> s.str
         | Identifier i -> i.str
+        | Let -> "let"
+        | Type -> "type"
         | Plus -> "+"
         | Minus -> "-"
         | Asterisk -> "*"
@@ -41,6 +43,8 @@ type TestAnyToken private (token) =
             yield!
                 TestIdentifier.shrink i
                 |> Seq.map (Identifier >> TestAnyToken)
+        | Let
+        | Type
         | Plus
         | Minus
         | Asterisk
@@ -57,6 +61,8 @@ and private Token' =
     | DecimalNumber of TestNumber
     | StringLiteral of TestQuotedString 
     | Identifier of TestIdentifier
+    | Let
+    | Type
     | Plus
     | Minus
     | Asterisk

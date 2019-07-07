@@ -1,9 +1,10 @@
 namespace Kedr
 
 type Token =
-    | InvalidToken of string
-    | Minus
+    | Let
+    | Type
     | Plus
+    | Minus
     | Asterisk
     | Slash
     | Equals
@@ -13,3 +14,4 @@ type Token =
     | Identifier of string
     | Number of integerPart:int64 * fractionalPart: int64 option
     | QuotedString of contents:string
+    | InvalidToken of string

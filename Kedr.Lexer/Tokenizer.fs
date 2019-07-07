@@ -21,7 +21,11 @@ let private parseReader (reader: StreamReader) =
     let skipWhitespace = skipZeroOrMoreCond isWhiteSpace |> commitOnSuccess
 
     let parseToken =
-        chooseLongest [
+        chooseFirstLongest [
+            let'
+            type'
+            identifier
+            
             plus
             minus
             asterisk
@@ -30,7 +34,6 @@ let private parseReader (reader: StreamReader) =
             notEquals
             parenOpen
             parenClose
-            identifier
             number
             quotedString
         ]
@@ -38,7 +41,7 @@ let private parseReader (reader: StreamReader) =
         |> commitOnSuccess
 
     let parseLine =
-        zeroOrMore (skipWhitespace >>. parseToken .>> skipWhitespace)
+        skipWhitespace >>. zeroOrMore (parseToken .>> skipWhitespace)
 
     let parse = parseLine
     

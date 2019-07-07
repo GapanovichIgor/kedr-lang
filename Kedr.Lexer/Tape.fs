@@ -68,9 +68,11 @@ type internal Tape<'a>(getNext: unit -> 'a option) =
         this.MoveForward(1)
 
     member __.MoveBack(count) =
-        assert (count >= 0)
+//        assert (count >= 0)
+        if not (count >= 0) then ()
         headPos <- headPos - count
-        assert (headPos >= windowStart - 1)
+//        assert (headPos >= windowStart - 1)
+        if not (headPos >= windowStart - 1) then ()
 
     member __.Consume(count): 'a array =
         assert (count >= 0)

@@ -21,21 +21,25 @@ let private constToken (str: string) t: TokenParser =
 
     parser >> parseResultMapConst t
 
-let quotedString: TokenParser =
-    (skipOne '"' >>. zeroOrMoreAnyWithTerminator '"')
-    >> ParseResult.map (String >> QuotedString)
+let let': TokenParser = constToken "let" Let
 
-let number: TokenParser =
-    let integerPart = oneOrMoreCond Char.IsDigit
-    let fractionalPart = optional (skipOne '.' >>. oneOrMoreCond Char.IsDigit)
+let type': TokenParser = constToken "type" Token.Type
 
-    let makeToken (integerPart: char array, fractionalPart: char array option) =
-        let integerPart = integerPart |> String |> Int64.Parse
-        let fractionalPart = fractionalPart |> Option.map (String >> Int64.Parse)
-        Number(integerPart, fractionalPart)
+let plus: TokenParser = constToken "+" Plus
 
-    integerPart .>>. fractionalPart
-    >> ParseResult.map makeToken
+let minus: TokenParser = constToken "-" Minus
+
+let asterisk: TokenParser = constToken "*" Asterisk
+
+let slash: TokenParser = constToken "/" Slash
+
+let equals: TokenParser = constToken "=" Equals
+
+let notEquals: TokenParser = constToken "/=" NotEquals
+
+let parenOpen: TokenParser = constToken "(" ParenOpen
+
+let parenClose: TokenParser = constToken ")" ParenClose
 
 let identifier: TokenParser =
     let firstCharCond c =
@@ -58,21 +62,21 @@ let identifier: TokenParser =
     oneCond firstCharCond .>>. zeroOrMoreCond followingCharCond
     >> ParseResult.map makeToken
 
-let plus: TokenParser = constToken "+" Plus
+let number: TokenParser =
+    let integerPart = oneOrMoreCond Char.IsDigit
+    let fractionalPart = optional (skipOne '.' >>. oneOrMoreCond Char.IsDigit)
 
-let minus: TokenParser = constToken "-" Minus
+    let makeToken (integerPart: char array, fractionalPart: char array option) =
+        let integerPart = integerPart |> String |> Int64.Parse
+        let fractionalPart = fractionalPart |> Option.map (String >> Int64.Parse)
+        Number(integerPart, fractionalPart)
 
-let asterisk: TokenParser = constToken "*" Asterisk
+    integerPart .>>. fractionalPart
+    >> ParseResult.map makeToken
 
-let slash: TokenParser = constToken "/" Slash
-
-let equals: TokenParser = constToken "=" Equals
-
-let notEquals: TokenParser = constToken "/=" NotEquals
-
-let parenOpen: TokenParser = constToken "(" ParenOpen
-
-let parenClose: TokenParser = constToken ")" ParenClose
+let quotedString: TokenParser =
+    (skipOne '"' >>. zeroOrMoreAnyWithTerminator '"')
+    >> ParseResult.map (String >> QuotedString)
 
 let invalidToken: TokenParser =
     oneOrMoreCond (not << isWhiteSpace)

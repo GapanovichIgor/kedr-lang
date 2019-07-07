@@ -8,34 +8,39 @@ type TestIdentifier(identifier : string) =
     
     override this.ToString() = this.str
     
-    static member generator = gen {
-        let! length =
-            Arb.generate<uint32>
-            |> Gen.filter (fun l -> l > 0u)
-        let length = int32 length
-            
-        let chars = Array.zeroCreate<char> length
-        
-        let! firstChar =
-            Arb.generate<char>
-            |> Gen.filter (fun c -> Char.IsLetter c || c = '_')
-            
-        chars.[0] <- firstChar
-        
-        for i = 1 to length - 1 do
-            let! char =
-                Arb.generate<char>
-                |> Gen.filter (fun c ->
-                    Char.IsLetter c ||
-                    c = '_') // TODO other chars
+    static member generator = (
+        gen {
+            let! length =
+                Arb.generate<uint32>
+                |> Gen.filter (fun l -> l > 0u)
+            let length = int32 length
                 
-            chars.[i] <- char
+            let chars = Array.zeroCreate<char> length
             
-        return
-            chars
-            |> String
-            |> TestIdentifier
-    }
+            let! firstChar =
+                Arb.generate<char>
+                |> Gen.filter (fun c -> Char.IsLetter c || c = '_')
+                
+            chars.[0] <- firstChar
+            
+            for i = 1 to length - 1 do
+                let! char =
+                    Arb.generate<char>
+                    |> Gen.filter (fun c ->
+                        Char.IsLetter c ||
+                        c = '_') // TODO other chars
+                    
+                chars.[i] <- char
+                
+            return
+                chars
+                |> String
+                |> TestIdentifier
+        }
+        |> Gen.filter (fun ident ->
+            ident.str <> "let" &&
+            ident.str <> "type")
+    )
     
     static member shrink (value : TestIdentifier) = seq {
         if value.str.Length > 1 then

@@ -22,6 +22,12 @@ let tests =
             fun (identifier: TestIdentifier) ->
                 parse !identifier = [ Identifier !identifier ]
 
+        "let is parsed as such" :=
+            parse "let" = [ Let ]
+
+        "type is parsed as such" :=
+            parse "type" = [ Type ]
+
         "plus is parsed as such" :=
             parse "+" = [ Plus ]
 
@@ -72,5 +78,8 @@ let tests =
                 parsedTogether = parsedIndividually
 
         "invalid token is parsed as such" :=
-            parse "." = [ InvalidToken "." ]
+            parse "@" = [ InvalidToken "@" ]
+
+        "test" :=
+            parse "let add x y = x + y" = [ Let; Identifier "add"; Identifier "x"; Identifier "y"; Equals; Identifier "x"; Plus; Identifier "y" ]
     ]
