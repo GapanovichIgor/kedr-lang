@@ -18,6 +18,8 @@ let (.>>.) (p1: Parser<'i, 'o1>) (p2: Parser<'i, 'o2>): Parser<'i, 'o1 * 'o2> =
     combine id p1 p2
 
 let chooseLongest (parsers: Parser<'i, 'o> list): Parser<'i, 'o> =
+    assert (parsers.Length >= 2)
+    
     let combine r1 r2 =
         match r1, r2 with
         | Ok s1, Ok s2 ->
@@ -34,12 +36,23 @@ let chooseLongest (parsers: Parser<'i, 'o> list): Parser<'i, 'o> =
     let initial = Error()
 
     fun tape ->
-        let t =
+        let result =
             parsers
-            |> Seq.map (fun p -> p tape)
-        ()
-        t
-        |> Seq.fold combine initial
+            |> Seq.map (fun p ->
+                let r = p tape
+                
+                match r with
+                | Ok s -> tape.MoveBack(s.length)
+                | _ -> ()
+                
+                r)
+            |> Seq.fold combine initial
+        
+        match result with
+        | Ok s -> tape.MoveForward(s.length)
+        | _ -> ()
+        
+        result
 
 let optional (parser: Parser<'i, 'o>): Parser<'i, 'o option> =
     fun tape ->

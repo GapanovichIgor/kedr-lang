@@ -19,16 +19,22 @@ let tests =
                 parse !strLit = [ QuotedString strLit.contents ]
 
         "plus is parsed as such" :=
-            fun () -> parse "+" = [ Plus ]
+            parse "+" = [ Plus ]
 
         "minus is parsed as such" :=
-            fun () -> parse "-" = [ Minus ]
+            parse "-" = [ Minus ]
 
         "asterisk is parsed as such" :=
-            fun () -> parse "*" = [ Asterisk ]
+            parse "*" = [ Asterisk ]
 
         "slash is parsed as such" :=
-            fun () -> parse "/" = [ Slash ]
+            parse "/" = [ Slash ]
+
+        "equals is parsed as such" :=
+            parse "=" = [ Equals ]
+
+        "not equals is parsed as such" :=
+            parse "/=" = [ NotEquals ]
 
         "whitespace is not a token" :=
             fun (ws: TestWhitespace) ->
@@ -56,6 +62,5 @@ let tests =
                 parsedTogether = parsedIndividually
 
         "invalid token is parsed as such" :=
-            fun () ->
-                parse "." = [ InvalidToken "." ]
+            parse "." = [ InvalidToken "." ]
     ]

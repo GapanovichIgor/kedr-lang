@@ -13,6 +13,8 @@ type TestAnyToken private (token) =
         | Minus -> "-"
         | Asterisk -> "*"
         | Slash -> "/"
+        | Equals -> "="
+        | NotEquals -> "/="
 
     override this.ToString() = this.str
 
@@ -35,7 +37,9 @@ type TestAnyToken private (token) =
         | Plus
         | Minus
         | Asterisk
-        | Slash -> ()
+        | Slash
+        | Equals
+        | NotEquals -> ()
     }
 
     static member arb = Arb.fromGenShrink (TestAnyToken.generator, TestAnyToken.shrink)
@@ -47,3 +51,5 @@ and private Token' =
     | Minus
     | Asterisk
     | Slash
+    | Equals
+    | NotEquals

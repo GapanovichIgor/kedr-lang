@@ -14,7 +14,7 @@ let skipAny<'i> (count: int) (tape: Tape<'i>): ParseResult<unit> =
             if tape.Current.IsSome then
                 loop i
             else
-                tape.Backtrack(i)
+                tape.MoveBack(i)
                 Error()
 
     loop 0
@@ -24,7 +24,7 @@ let skipOne<'i when 'i: equality> (item: 'i) (tape: Tape<'i>): ParseResult<unit>
     if tape.Current = Some item then
         Ok { value = (); length = 1 }
     else
-        tape.Backtrack(1)
+        tape.MoveBack(1)
         Error()
 
 let zeroOrMoreCond<'i> (cond: 'i -> bool) (tape: Tape<'i>): ParseResult<'i array> =
@@ -35,7 +35,7 @@ let zeroOrMoreCond<'i> (cond: 'i -> bool) (tape: Tape<'i>): ParseResult<'i array
         | Some i when cond i ->
             loop advanceCount
         | _ ->
-            tape.Backtrack(advanceCount)
+            tape.MoveBack(advanceCount)
             let items = tape.Consume(advanceCount - 1)
             Ok { value = items; length = items.Length }
     
@@ -49,7 +49,7 @@ let skipZeroOrMoreCond<'i> (pred: 'i -> bool) (tape: Tape<'i>): ParseResult<unit
         | Some i when pred i ->
             loop (advanceCount)
         | _ ->
-            tape.Backtrack(1)
+            tape.MoveBack(1)
             Ok { value = (); length = advanceCount - 1 }
 
     loop 0
@@ -62,7 +62,7 @@ let oneOrMoreCond<'i> (cond: 'i -> bool) (tape: Tape<'i>): ParseResult<'i array>
         | Some i when cond i ->
             loop advanceCount
         | _ ->
-            tape.Backtrack(advanceCount)
+            tape.MoveBack(advanceCount)
             if advanceCount > 1 then
                 let items = tape.Consume(advanceCount - 1)
                 Ok { value = items; length = items.Length }

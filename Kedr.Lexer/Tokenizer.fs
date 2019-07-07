@@ -28,6 +28,8 @@ let private parseReader (reader: StreamReader) =
             minus
             asterisk
             slash
+            equals
+            notEquals
             number
             quotedString
         ]
@@ -38,7 +40,7 @@ let private parseReader (reader: StreamReader) =
         zeroOrMore (skipWhitespace >>. parseToken .>> skipWhitespace)
 
     let parse = parseLine
-
+    
     match parse tape with
     | Ok ok -> ok.value
     | Error _ -> []

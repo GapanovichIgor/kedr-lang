@@ -6,7 +6,18 @@ open WhiteSpace
 
 let private parseResultMapConst x = ParseResult.map (fun _ -> x)
 
-let private charToken c t = skipOne c >> parseResultMapConst t
+let private constToken (str : string) t =
+    assert (str.Length > 0)
+    
+    let parser = 
+        if str.Length = 1 then
+            skipOne str.[0]
+        else
+            str
+            |> Seq.map skipOne
+            |> Seq.reduce (>>.)
+            
+    parser >> parseResultMapConst t
 
 let quotedString: Parser<char, Token> =
     (skipOne '"' >>. zeroOrMoreAnyWithTerminator '"')
@@ -24,13 +35,17 @@ let number: Parser<char, Token> =
     integerPart .>>. fractionalPart
     >> ParseResult.map makeToken
 
-let plus: Parser<char, Token> = charToken '+' Plus
+let plus: Parser<char, Token> = constToken "+" Plus
 
-let minus: Parser<char, Token> = charToken '-' Minus
+let minus: Parser<char, Token> = constToken "-" Minus
 
-let asterisk: Parser<char, Token> = charToken '*' Asterisk
+let asterisk: Parser<char, Token> = constToken "*" Asterisk
 
-let slash: Parser<char, Token> = charToken '/' Slash
+let slash: Parser<char, Token> = constToken "/" Slash
+
+let equals : Parser<char, Token> = constToken "=" Equals
+
+let notEquals : Parser<char, Token> = constToken "/=" NotEquals
 
 let invalidToken: Parser<char, Token> =
     oneOrMoreCond (not << isWhiteSpace)

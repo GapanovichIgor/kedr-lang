@@ -59,12 +59,16 @@ type internal Tape<'a>(getNext: unit -> 'a option) =
             assert (headPos <= windowEnd)
             buffer.[headPos]
             |> Some
+            
+    member __.MoveForward(count) : unit =
+        assert(count >= 0)
+        headPos <- headPos + count
 
-    member __.MoveNext(): unit =
-        headPos <- headPos + 1
+    member this.MoveNext(): unit =
+        this.MoveForward(1)
 
-    member __.Backtrack(count) =
-        assert (count > 0)
+    member __.MoveBack(count) =
+        assert (count >= 0)
         headPos <- headPos - count
         assert (headPos >= windowStart - 1)
 
