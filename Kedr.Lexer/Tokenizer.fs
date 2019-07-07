@@ -9,7 +9,7 @@ open ParserPrimitives
 open TokenParsers
 open WhiteSpace
 
-let private skipWhitespace = skipZeroOrMoreCond isWhiteSpace
+
 
 let private parseReader (reader: StreamReader) =
     let readChar() =
@@ -19,24 +19,23 @@ let private parseReader (reader: StreamReader) =
         else Some(char i)
 
     let tape = Tape(readChar)
+    
+    let skipWhitespace = skipZeroOrMoreCond isWhiteSpace |> commitOnSuccess
+    
+    let parseToken =
+        chooseLongest [
+            number
+            quotedString
+        ]
+        |> orElse invalidToken
+        |> commitOnSuccess
+        
+    let parseLine =
+        zeroOrMore (skipWhitespace >>. parseToken .>> skipWhitespace)
 
-    let lineParser =
-        zeroOrMore (
-            (skipWhitespace |> commitOnSuccess)
-            >>.
-            (chooseLongest [
-                number
-                quotedString
-            ]
-            |> orElse invalidToken
-            |> commitOnSuccess)
-            .>>
-            (skipWhitespace |> commitOnSuccess)
-        )
+    let parse = parseLine
 
-    let parser = lineParser
-
-    match parser tape with
+    match parse tape with
     | Ok ok -> ok.value
     | Error _ -> []
 
