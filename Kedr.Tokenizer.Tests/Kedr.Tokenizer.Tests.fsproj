@@ -1,0 +1,35 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+    <PropertyGroup>
+        <TargetFramework>netcoreapp2.2</TargetFramework>
+
+        <IsPackable>false</IsPackable>
+        <GenerateProgramFile>false</GenerateProgramFile>
+    </PropertyGroup>
+
+    <ItemGroup>
+        <Compile Include="Util.fs" />
+        <Compile Include="Data\Whitespace.fs" />
+        <Compile Include="Data\Indentation.fs" />
+        <Compile Include="Data\NewLine.fs" />
+        <Compile Include="Data\Number.fs" />
+        <Compile Include="Data\QuotedString.fs" />
+        <Compile Include="Data\Identifier.fs" />
+        <Compile Include="Data\AnyToken.fs" />
+        <Compile Include="Arbs.fs" />
+        <Compile Include="Properties.fs" />
+        <Compile Include="Program.fs" />
+    </ItemGroup>
+
+    <ItemGroup>
+        <PackageReference Include="FsCheck.Xunit" Version="3.0.0-alpha4" />
+        <PackageReference Include="Microsoft.NET.Test.Sdk" Version="15.9.0" />
+        <PackageReference Include="xunit" Version="2.4.0" />
+        <PackageReference Include="xunit.runner.visualstudio" Version="2.4.0" />
+    </ItemGroup>
+
+    <ItemGroup>
+      <ProjectReference Include="..\Kedr.Lexer\Kedr.Lexer.fsproj" />
+    </ItemGroup>
+
+</Project>

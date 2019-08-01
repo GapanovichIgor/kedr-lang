@@ -11,7 +11,9 @@
     <Compile Include="ParserComposition.fs" />
     <Compile Include="ParserPrimitives.fs" />
     <Compile Include="WhiteSpace.fs" />
+    <Compile Include="TokenizerState.fs" />
     <Compile Include="TokenParsers.fs" />
+    <Compile Include="IndentationParser.fs" />
     <Compile Include="Tokenizer.fs" />
   </ItemGroup>
 </Project>

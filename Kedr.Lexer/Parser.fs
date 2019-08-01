@@ -1,19 +1,21 @@
 namespace Kedr
 
 [<Struct>]
-type ParseSuccess<'a> =
-    { value: 'a
+type ParseSuccess<'v, 's> =
+    { value: 'v
+      state: 's
       length: int }
 
-type internal ParseResult<'a> = Result<ParseSuccess<'a>, unit> // TODO error
+type internal ParseResult<'v, 's> = Result<ParseSuccess<'v, 's>, unit> // TODO error
 
 module internal ParseResult =
-    let map (f: 'a -> 'b) (r: ParseResult<'a>): ParseResult<'b> =
+    let mapValue (f: 'a -> 'b) (r: ParseResult<'a, _>): ParseResult<'b, _> =
         match r with
         | Ok ok ->
             { value = f ok.value
+              state = ok.state
               length = ok.length }
             |> Ok
         | Error e -> Error e
 
-type internal Parser<'i, 'o> = Tape<'i> -> ParseResult<'o>
+type internal Parser<'i, 's, 'o> = Tape<'i> * 's -> ParseResult<'o, 's>

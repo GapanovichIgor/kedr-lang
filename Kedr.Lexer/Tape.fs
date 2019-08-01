@@ -13,7 +13,7 @@ type internal Tape<'a>(getNext: unit -> 'a option) =
     let allocate count =
         assert (count >= 0)
 
-        let windowLength = windowEnd - windowStart + 1
+        let windowLength = windowEnd - windowStart
 
         if windowStart >= count then
             Array.Copy(buffer, windowStart, buffer, 0, windowLength)
@@ -68,11 +68,9 @@ type internal Tape<'a>(getNext: unit -> 'a option) =
         this.MoveForward(1)
 
     member __.MoveBack(count) =
-//        assert (count >= 0)
-        if not (count >= 0) then ()
+        assert (count >= 0)
         headPos <- headPos - count
-//        assert (headPos >= windowStart - 1)
-        if not (headPos >= windowStart - 1) then ()
+        assert (headPos >= windowStart - 1)
 
     member __.Consume(count): 'a array =
         assert (count >= 0)

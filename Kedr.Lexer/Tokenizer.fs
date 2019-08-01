@@ -1,15 +1,14 @@
 module Kedr.Tokenizer
 
 open Kedr
-open System.IO
-open System.Text
-
 open ParserComposition
 open ParserPrimitives
+open System.IO
+open System.Text
 open TokenParsers
 open WhiteSpace
 
-let private parseReader (reader: StreamReader) =
+let private parseReader (reader : StreamReader) =
     let readChar() =
         let i = reader.Read()
         if i = -1
@@ -18,14 +17,22 @@ let private parseReader (reader: StreamReader) =
 
     let tape = Tape(readChar)
 
-    let skipWhitespace = skipZeroOrMoreCond isWhiteSpace |> commitOnSuccess
+    let maybeSkipWhitespace = skipZeroOrMoreCond isWhiteSpace |> commitOnSuccess
+
+    let skipNewLine =
+        chooseFirstLongest [
+            skipOne '\n'
+            skipOne '\r'
+            skipOne '\r' >>. skipOne '\n'
+        ]
+        |> commitOnSuccess
 
     let parseToken =
         chooseFirstLongest [
             let'
             type'
             identifier
-            
+
             plus
             minus
             asterisk
@@ -34,31 +41,47 @@ let private parseReader (reader: StreamReader) =
             notEquals
             parenOpen
             parenClose
+
             number
+
             quotedString
         ]
         |> orElse invalidToken
         |> commitOnSuccess
 
     let parseLine =
-        skipWhitespace >>. zeroOrMore (parseToken .>> skipWhitespace)
+        IndentationParser.parse .>>. zeroOrMore (parseToken .>> maybeSkipWhitespace)
+        >> ParseResult.mapValue (fun (l, r) -> l @ r)
+        
+    let terminateBlocks result =
+        match result with
+        | Ok s ->
+            let (tokens, state) = IndentationParser.terminateWhenEndReached s.state
+            { value = s.value @ [ tokens ]
+              state = state
+              length = s.length }
+            |> Ok
+        | Error e -> Error e
 
-    let parse = parseLine
-    
-    match parse tape with
+    let parse =
+        zeroOrMoreDelimited skipNewLine parseLine
+        >> terminateBlocks
+        >> ParseResult.mapValue (List.concat)
+
+    match parse (tape, TokenizerState.initial) with
     | Ok ok -> ok.value
     | Error _ -> []
 
 
-let parse (stream: Stream): Token list =
+let parse (stream : Stream) : Token list =
     let reader = new StreamReader(stream)
     parseReader reader
 
-let parseEnc (encoding: Encoding) (stream: Stream): Token list =
+let parseEnc (encoding : Encoding) (stream : Stream) : Token list =
     let reader = new StreamReader(stream, encoding)
     parseReader reader
 
-let parseString (str: string): Token list =
+let parseString (str : string) : Token list =
     let encoding = Encoding.Unicode
     let bytes = encoding.GetBytes str
     let ms = new MemoryStream(bytes)

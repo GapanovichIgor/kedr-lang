@@ -1,55 +1,56 @@
 module internal Kedr.TokenParsers
-open System
-open ParserPrimitives
 open ParserComposition
+open ParserPrimitives
+open System
 open WhiteSpace
 
-type private TokenParser = Parser<char, Token>
+type private TokenParser<'s> = Parser<char, 's, Token>
 
-let private parseResultMapConst x = ParseResult.map (fun _ -> x)
+let private parseResultMapConst x = ParseResult.mapValue (fun _ -> x)
 
-let private constToken (str: string) t: TokenParser =
+let private constParser (str : string) : Parser<char, 's, unit> =
     assert (str.Length > 0)
 
-    let parser =
-        if str.Length = 1 then
-            skipOne str.[0]
-        else
-            str
-            |> Seq.map skipOne
-            |> Seq.reduce (>>.)
+    if str.Length = 1 then
+        skipOne str.[0]
+    else
+        str
+        |> Seq.map skipOne
+        |> Seq.reduce (>>.)
 
-    parser >> parseResultMapConst t
+let private constToken (str : string) (t) : TokenParser<'s> =
+    constParser str >> parseResultMapConst t
 
-let let': TokenParser = constToken "let" Let
 
-let type': TokenParser = constToken "type" Token.Type
+let let'<'s> : TokenParser<'s> = constToken "let" Let
 
-let plus: TokenParser = constToken "+" Plus
+let type'<'s> : TokenParser<'s> = constToken "type" Token.Type
 
-let minus: TokenParser = constToken "-" Minus
+let plus<'s> : TokenParser<'s> = constToken "+" Plus
 
-let asterisk: TokenParser = constToken "*" Asterisk
+let minus<'s> : TokenParser<'s> = constToken "-" Minus
 
-let slash: TokenParser = constToken "/" Slash
+let asterisk<'s> : TokenParser<'s> = constToken "*" Asterisk
 
-let equals: TokenParser = constToken "=" Equals
+let slash<'s> : TokenParser<'s> = constToken "/" Slash
 
-let notEquals: TokenParser = constToken "/=" NotEquals
+let equals<'s> : TokenParser<'s> = constToken "=" Equals
 
-let parenOpen: TokenParser = constToken "(" ParenOpen
+let notEquals<'s> : TokenParser<'s> = constToken "/=" NotEquals
 
-let parenClose: TokenParser = constToken ")" ParenClose
+let parenOpen<'s> : TokenParser<'s> = constToken "(" ParenOpen
 
-let identifier: TokenParser =
+let parenClose<'s> : TokenParser<'s> = constToken ")" ParenClose
+
+let identifier<'s> : TokenParser<'s> =
     let firstCharCond c =
         Char.IsLetter c ||
         c = '_'
 
     let followingCharCond c =
-        Char.IsLetter c ||
+        Char.IsLetterOrDigit c ||
         c = '_'
-        
+
     let makeToken (firstChar : char, followingChars : char array) =
         let result = Array.zeroCreate<char> (followingChars.Length + 1)
         result.[0] <- firstChar
@@ -60,24 +61,24 @@ let identifier: TokenParser =
         |> Identifier
 
     oneCond firstCharCond .>>. zeroOrMoreCond followingCharCond
-    >> ParseResult.map makeToken
+    >> ParseResult.mapValue makeToken
 
-let number: TokenParser =
+let number<'s> : TokenParser<'s> =
     let integerPart = oneOrMoreCond Char.IsDigit
     let fractionalPart = optional (skipOne '.' >>. oneOrMoreCond Char.IsDigit)
 
-    let makeToken (integerPart: char array, fractionalPart: char array option) =
-        let integerPart = integerPart |> String |> Int64.Parse
-        let fractionalPart = fractionalPart |> Option.map (String >> Int64.Parse)
+    let makeToken (integerPart : char array, fractionalPart : char array option) =
+        let integerPart = integerPart |> String |> UInt32.Parse
+        let fractionalPart = fractionalPart |> Option.map (String >> UInt32.Parse)
         Number(integerPart, fractionalPart)
 
     integerPart .>>. fractionalPart
-    >> ParseResult.map makeToken
+    >> ParseResult.mapValue makeToken
 
-let quotedString: TokenParser =
+let quotedString<'s> : TokenParser<'s> =
     (skipOne '"' >>. zeroOrMoreAnyWithTerminator '"')
-    >> ParseResult.map (String >> QuotedString)
+    >> ParseResult.mapValue (String >> QuotedString)
 
-let invalidToken: TokenParser =
-    oneOrMoreCond (not << isWhiteSpace)
-    >> ParseResult.map (String >> InvalidToken)
+let invalidToken<'s> : TokenParser<'s> =
+    oneOrMoreCond (fun c -> not (isWhiteSpace c) && c <> '\n' && c <> '\r')
+    >> ParseResult.mapValue (String >> InvalidToken)

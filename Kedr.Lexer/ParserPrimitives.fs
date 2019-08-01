@@ -2,20 +2,27 @@ module internal Kedr.ParserPrimitives
 
 open ParserComposition
 
-let oneCond<'i> (cond: 'i -> bool) (tape: Tape<'i>): ParseResult<'i> =
+let oneCond<'i, 's> (cond: 'i -> bool) (tape: Tape<'i>, state: 's): ParseResult<'i, 's> =
    tape.MoveNext()
    match tape.Current with
-   | Some i when cond i -> Ok { value = i; length = 1 }
+   | Some i when cond i ->
+       { value = i
+         state = state
+         length = 1 }
+       |> Ok
    | _ ->
        tape.MoveBack(1)
        Error()
 
-let skipAny<'i> (count: int) (tape: Tape<'i>): ParseResult<unit> =
+let skipAny<'i, 's> (count: int) (tape: Tape<'i>, state: 's): ParseResult<unit, 's> =
     assert (count > 0)
 
     let rec loop i =
         if i = count then
-            Ok { value = (); length = count }
+            { value = ()
+              state = state
+              length = count }
+            |> Ok
         else
             tape.MoveNext()
             let i = i + 1
@@ -27,15 +34,18 @@ let skipAny<'i> (count: int) (tape: Tape<'i>): ParseResult<unit> =
 
     loop 0
 
-let skipOne<'i when 'i: equality> (item: 'i) (tape: Tape<'i>): ParseResult<unit> =
+let skipOne<'i, 's when 'i: equality> (item: 'i) (tape: Tape<'i>, state: 's): ParseResult<unit, 's> =
     tape.MoveNext()
     if tape.Current = Some item then
-        Ok { value = (); length = 1 }
+        { value = ()
+          state = state
+          length = 1 }
+        |> Ok
     else
         tape.MoveBack(1)
         Error()
 
-let zeroOrMoreCond<'i> (cond: 'i -> bool) (tape: Tape<'i>): ParseResult<'i array> =
+let zeroOrMoreCond<'i, 's> (cond: 'i -> bool) (tape: Tape<'i>, state: 's): ParseResult<'i array, 's> =
     let rec loop advanceCount =
         tape.MoveNext()
         let advanceCount = advanceCount + 1
@@ -45,11 +55,14 @@ let zeroOrMoreCond<'i> (cond: 'i -> bool) (tape: Tape<'i>): ParseResult<'i array
         | _ ->
             tape.MoveBack(advanceCount)
             let items = tape.Consume(advanceCount - 1)
-            Ok { value = items; length = items.Length }
+            { value = items
+              state = state
+              length = items.Length }
+            |> Ok
 
     loop 0
 
-let skipZeroOrMoreCond<'i> (pred: 'i -> bool) (tape: Tape<'i>): ParseResult<unit> =
+let skipZeroOrMoreCond<'i, 's> (pred: 'i -> bool) (tape: Tape<'i>, state:'s): ParseResult<unit, 's> =
     let rec loop advanceCount =
         tape.MoveNext()
         let advanceCount = advanceCount + 1
@@ -58,11 +71,14 @@ let skipZeroOrMoreCond<'i> (pred: 'i -> bool) (tape: Tape<'i>): ParseResult<unit
             loop (advanceCount)
         | _ ->
             tape.MoveBack(1)
-            Ok { value = (); length = advanceCount - 1 }
+            { value = ()
+              state = state
+              length = advanceCount - 1 }
+            |> Ok
 
     loop 0
 
-let oneOrMoreCond<'i> (cond: 'i -> bool) (tape: Tape<'i>): ParseResult<'i array> =
+let oneOrMoreCond<'i, 's> (cond: 'i -> bool) (tape: Tape<'i>, state: 's): ParseResult<'i array, 's> =
     let rec loop advanceCount =
         tape.MoveNext()
         let advanceCount = advanceCount + 1
@@ -73,13 +89,16 @@ let oneOrMoreCond<'i> (cond: 'i -> bool) (tape: Tape<'i>): ParseResult<'i array>
             tape.MoveBack(advanceCount)
             if advanceCount > 1 then
                 let items = tape.Consume(advanceCount - 1)
-                Ok { value = items; length = items.Length }
+                { value = items
+                  state = state
+                  length = items.Length }
+                |> Ok
             else
                 Error()
 
     loop 0
 
-let zeroOrMoreAnyWithTerminator<'i when 'i: equality> (terminator: 'i): Parser<'i, 'i array> =
+let zeroOrMoreAnyWithTerminator<'i, 's when 'i: equality> (terminator: 'i): Parser<'i, 's, 'i array> =
     zeroOrMoreCond ((<>) terminator)
     .>>
     skipOne terminator
