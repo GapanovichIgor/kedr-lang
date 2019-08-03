@@ -13,7 +13,7 @@ type internal Tape<'a>(getNext: unit -> 'a option) =
     let allocate count =
         assert (count >= 0)
 
-        let windowLength = windowEnd - windowStart + 1
+        let windowLength = windowEnd - windowStart
 
         if windowStart >= count then
             Array.Copy(buffer, windowStart, buffer, 0, windowLength)

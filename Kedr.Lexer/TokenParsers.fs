@@ -67,8 +67,8 @@ let number: TokenParser =
     let fractionalPart = optional (skipOne '.' >>. oneOrMoreCond Char.IsDigit)
 
     let makeToken (integerPart: char array, fractionalPart: char array option) =
-        let integerPart = integerPart |> String |> Int64.Parse
-        let fractionalPart = fractionalPart |> Option.map (String >> Int64.Parse)
+        let integerPart = integerPart |> String |> UInt32.Parse
+        let fractionalPart = fractionalPart |> Option.map (String >> UInt32.Parse)
         Number(integerPart, fractionalPart)
 
     integerPart .>>. fractionalPart
