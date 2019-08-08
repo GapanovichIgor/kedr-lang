@@ -1,4 +1,4 @@
-namespace Kedr.Tokenizer.Tests.Data
+namespace Kedr.Tokenization.Tests.Data
 open FsCheck
 
 type AnyToken(tokenText, debugText, shrink) =

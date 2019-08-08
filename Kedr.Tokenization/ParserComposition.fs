@@ -1,4 +1,4 @@
-module internal Kedr.ParserComposition
+module internal Kedr.Tokenization.ParserComposition
 
 let inline private combine valueSelector p1 p2 =
     fun (tape: Tape<_>, state) ->

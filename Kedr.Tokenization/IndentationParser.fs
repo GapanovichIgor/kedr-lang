@@ -1,4 +1,4 @@
-module internal Kedr.IndentationParser
+module internal Kedr.Tokenization.IndentationParser
 
 open Kedr
 open ParserPrimitives

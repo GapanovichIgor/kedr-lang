@@ -1,6 +1,6 @@
-namespace Kedr.Tokenizer.Tests.Data
+namespace Kedr.Tokenization.Tests.Data
 open FsCheck
-open Kedr.Tokenizer.Tests
+open Kedr.Tokenization.Tests
 
 type NewLine(text) =
     member val tokenText = text

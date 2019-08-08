@@ -1,10 +1,10 @@
-namespace Kedr.Tokenizer.Tests
+namespace Kedr.Tokenization.Tests
 
 open Xunit
 open FsCheck
 open FsCheck.Xunit
-open Kedr
-open Kedr.Tokenizer.Tests.Data
+open Kedr.Tokenization
+open Kedr.Tokenization.Tests.Data
 open Util
 open Data.Number
 open Data.Whitespace

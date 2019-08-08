@@ -1,4 +1,4 @@
-module internal Kedr.ParserPrimitives
+module internal Kedr.Tokenization.ParserPrimitives
 
 open ParserComposition
 

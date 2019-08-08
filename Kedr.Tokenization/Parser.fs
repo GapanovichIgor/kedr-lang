@@ -1,4 +1,4 @@
-namespace Kedr
+namespace Kedr.Tokenization
 
 [<Struct>]
 type ParseSuccess<'v, 's> =

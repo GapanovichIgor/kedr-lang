@@ -1,4 +1,4 @@
-module internal Kedr.Utils
+module internal Kedr.Tokenization.Utils
 
 let inline getSubArray startInd length (collection: array<_>) =
     assert (startInd + length <= collection.Length)

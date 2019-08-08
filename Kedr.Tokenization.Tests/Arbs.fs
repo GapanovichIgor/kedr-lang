@@ -1,5 +1,5 @@
-namespace Kedr.Tokenizer.Tests
-open Kedr.Tokenizer.Tests.Data
+namespace Kedr.Tokenization.Tests
+open Kedr.Tokenization.Tests.Data
 
 type Arbs =
     static member whitespace () = Whitespace.arb

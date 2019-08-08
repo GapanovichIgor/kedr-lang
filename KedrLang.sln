@@ -1,8 +1,8 @@
 ﻿
 Microsoft Visual Studio Solution File, Format Version 12.00
-Project("{F2A71F9B-5D33-465A-A702-920D77279786}") = "Kedr.Lexer", "Kedr.Lexer\Kedr.Lexer.fsproj", "{20DF3D47-C2DA-4133-A586-116DFA72A7CB}"
+Project("{F2A71F9B-5D33-465A-A702-920D77279786}") = "Kedr.Tokenization", "Kedr.Tokenization\Kedr.Tokenization.fsproj", "{20DF3D47-C2DA-4133-A586-116DFA72A7CB}"
 EndProject
-Project("{F2A71F9B-5D33-465A-A702-920D77279786}") = "Kedr.Tokenizer.Tests", "Kedr.Tokenizer.Tests\Kedr.Tokenizer.Tests.fsproj", "{AA286C74-E648-4A36-9EBB-6DB18200F9AA}"
+Project("{F2A71F9B-5D33-465A-A702-920D77279786}") = "Kedr.Tokenization.Tests", "Kedr.Tokenization.Tests\Kedr.Tokenization.Tests.fsproj", "{AA286C74-E648-4A36-9EBB-6DB18200F9AA}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution

@@ -1,4 +1,4 @@
-module Kedr.Tokenizer
+module Kedr.Tokenization.Tokenizer
 
 open Kedr
 open ParserComposition

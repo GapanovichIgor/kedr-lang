@@ -1,4 +1,4 @@
-namespace Kedr
+namespace Kedr.Tokenization
 
 type IndentationStyle =
     | Space

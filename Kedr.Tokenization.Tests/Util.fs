@@ -1,4 +1,4 @@
-module Kedr.Tokenizer.Tests.Util
+module Kedr.Tokenization.Tests.Util
 open FsCheck
 open System
 
