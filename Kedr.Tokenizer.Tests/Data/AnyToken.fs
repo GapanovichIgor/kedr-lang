@@ -16,9 +16,7 @@ module AnyToken =
             Number.shrink n
             |> Seq.map fromNumber
 
-        let text = n.ToString()
-
-        AnyToken(text, text, shrink)
+        AnyToken(n.tokenText, n.ToString(), shrink)
 
     let rec private fromQuotedString q =
         let shrink() =
@@ -32,9 +30,7 @@ module AnyToken =
             Identifier.shrink i
             |> Seq.map fromIdentifier
 
-        let text = let (Identifier i) = i in i.ToString()
-
-        AnyToken(text, text, shrink)
+        AnyToken(i.tokenText, i.ToString(), shrink)
 
     let private constGen t =
         let at = AnyToken(t, t, fun () -> Seq.empty)

@@ -16,4 +16,4 @@ let escapeString s =
     |> Seq.map escapeChar
     |> String.Concat
     
-let (.=.) x y = x = y |@ sprintf "%A = %A" x y
+let (==) x y = x = y |@ sprintf "%A = %A" x y

@@ -1,45 +1,48 @@
 namespace Kedr.Tokenizer.Tests.Data
 open FsCheck
 
-type Number =
-    { integerPart: uint32
-      fractionalPart: uint32 option }
-    with
-    override this.ToString() =
-        match this.fractionalPart with
-        | Some f -> sprintf "%u.%u" this.integerPart f
-        | None -> sprintf "%u" this.integerPart
-    
+type Number(integerPart, fractionalPart) =
+    member val integerPart = integerPart
+    member val fractionalPart = fractionalPart
+
+    member val tokenText =
+        match fractionalPart with
+        | Some f -> sprintf "%u.%u" integerPart f
+        | None -> sprintf "%u" integerPart
+
+    override this.ToString() = this.tokenText
+
 module Number =
-    
-    let (|Number''|) n =
-        (n.ToString(), n.integerPart, n.fractionalPart)
-        
-    let (|Number'|) n = n.ToString()
-    
+
+    let (|Number''|) (n : Number) =
+        (n.tokenText, n.integerPart, n.fractionalPart)
+
+    let (|Number'|) (n : Number) =
+        n.tokenText
+
     let gen =
         Gen.zip
             Arb.generate<uint32>
             (Arb.generate<uint32> |> Gen.optionOf)
-        |> Gen.map (fun (i, f) -> { integerPart = i; fractionalPart = f })
-        
-    let shrink { integerPart = i; fractionalPart = f } =
+        |> Gen.map Number
+
+    let shrink (n : Number) =
         seq {
-            match f with
-            | Some f ->
-                yield { integerPart = i; fractionalPart = None }
-                
+            match n.fractionalPart with
+            | Some fractionalPart ->
+                yield Number(n.integerPart, None)
+
                 yield!
-                    Arb.shrink f
-                    |> Seq.map (fun f -> { integerPart = i; fractionalPart = Some f })
-                    
+                    Arb.shrink fractionalPart
+                    |> Seq.map (fun f -> Number(n.integerPart, Some f))
+
                 yield!
-                    Arb.shrink i
-                    |> Seq.map (fun i -> { integerPart = i; fractionalPart = Some f })
+                    Arb.shrink n.integerPart
+                    |> Seq.map (fun i -> Number(i, Some fractionalPart))
             | None ->
                 yield!
-                    Arb.shrink i
-                    |> Seq.map (fun i -> { integerPart = i; fractionalPart = None })
+                    Arb.shrink n.integerPart
+                    |> Seq.map (fun i -> Number(i, None))
         }
-        
+
     let arb = Arb.fromGenShrink (gen, shrink)
