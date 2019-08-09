@@ -1,5 +1,6 @@
 namespace Kedr.Tokenization.Tests
 
+open System
 open Xunit
 open FsCheck
 open FsCheck.Xunit
@@ -84,10 +85,10 @@ module Properties =
         () =
 
         parse ")" == [ TK.ParenClose ]
-        
+
     let [<Fact>] ``hard break is parsed as such``
         () =
-        
+
         parse ";" == [ TK.HardBreak ]
 
     let [<Property>] ``whitespace is not a token``
@@ -129,7 +130,7 @@ module Properties =
         (NewLine' nl)
         (AnyToken' tok1)
         (AnyToken' tok2) =
-        
+
         parse (ind + tok1 + nl + ind + ind + tok2) ==
             (parse tok1) @ [ TK.BlockOpen ] @ (parse tok2) @ [ TK.BlockClose ]
 
@@ -138,22 +139,36 @@ module Properties =
         (NewLine' nl)
         (AnyToken' tok1)
         (AnyToken' tok2) =
-        
+
         parse (tok1 + nl + ind + tok2) == parse (ind + tok1 + nl + ind + ind + tok2)
-        
-    let [<Property>] ``block opens are always exactly matched by block closes``
-        () =
-        
-        false
-        
+
+    let [<Property>] ``number of block opens is always the same as the number of block closes``
+        (lines : (Indentation * AnyToken list) list) =
+
+        let text =
+            lines
+            |> List.map (fun ((Indentation' ind), tokens) ->
+                let linePayload =
+                    tokens
+                    |> List.map (fun (AnyToken' tok) -> tok)
+                    |> String.Concat
+                ind + linePayload)
+            |> String.Concat
+
+        let tokens = parse text
+
+        let count tok = tokens |> Seq.filter (fun tok' -> tok' = tok) |> Seq.length
+
+        count TK.BlockOpen == count TK.BlockClose
+
     let [<Property>] ``keeping indentation level produces soft break``
         (Indentation' ind)
         (AnyToken' tok1)
         (AnyToken' tok2)
         (NewLine' nl) =
-        
+
         parse (ind + tok1 + nl + ind + tok2) == (parse tok1) @ [ TK.SoftBreak ] @ (parse tok2)
-        
+
     let [<Property>] ``empty line does not affect block formation``
         (Indentation' ind1)
         (Indentation' ind2)
@@ -161,7 +176,7 @@ module Properties =
         (Whitespace' ws)
         (AnyToken' tok2)
         (NewLine' nl) =
-        
+
         parse (ind1 + tok1 + nl + ind2 + ws + nl + ind1 + tok2) == (parse tok1) @ [ TK.SoftBreak ] @ (parse tok2)
 
     let [<Fact>] ``arbitrary example test``
