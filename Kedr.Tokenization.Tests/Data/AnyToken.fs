@@ -52,6 +52,7 @@ module AnyToken =
             constGen "/="
             constGen "("
             constGen ")"
+            constGen ";"
         ]
 
     let shrink (at : AnyToken) = at.shrink()

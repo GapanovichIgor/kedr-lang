@@ -84,6 +84,11 @@ module Properties =
         () =
 
         parse ")" == [ TK.ParenClose ]
+        
+    let [<Fact>] ``hard break is parsed as such``
+        () =
+        
+        parse ";" == [ TK.HardBreak ]
 
     let [<Property>] ``whitespace is not a token``
         (Whitespace' ws) =
@@ -135,11 +140,34 @@ module Properties =
         (AnyToken' tok2) =
         
         parse (tok1 + nl + ind + tok2) == parse (ind + tok1 + nl + ind + ind + tok2)
+        
+    let [<Property>] ``block opens are always exactly matched by block closes``
+        () =
+        
+        false
+        
+    let [<Property>] ``keeping indentation level produces soft break``
+        (Indentation' ind)
+        (AnyToken' tok1)
+        (AnyToken' tok2)
+        (NewLine' nl) =
+        
+        parse (ind + tok1 + nl + ind + tok2) == (parse tok1) @ [ TK.SoftBreak ] @ (parse tok2)
+        
+    let [<Property>] ``empty line does not affect block formation``
+        (Indentation' ind1)
+        (Indentation' ind2)
+        (AnyToken' tok1)
+        (Whitespace' ws)
+        (AnyToken' tok2)
+        (NewLine' nl) =
+        
+        parse (ind1 + tok1 + nl + ind2 + ws + nl + ind1 + tok2) == (parse tok1) @ [ TK.SoftBreak ] @ (parse tok2)
 
     let [<Fact>] ``arbitrary example test``
         () =
 
-        parse "let add x y = x + y" ==
+        parse "let add x y = x + y;" ==
             [ TK.Let
               TK.Identifier "add"
               TK.Identifier "x"
@@ -147,4 +175,5 @@ module Properties =
               TK.Equals
               TK.Identifier "x"
               TK.Plus
-              TK.Identifier "y" ]
+              TK.Identifier "y"
+              TK.HardBreak ]

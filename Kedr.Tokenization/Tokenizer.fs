@@ -40,6 +40,7 @@ let private parseReader (reader : StreamReader) =
             notEquals
             parenOpen
             parenClose
+            hardBreak
 
             number
 
@@ -48,10 +49,18 @@ let private parseReader (reader : StreamReader) =
         |> orElse invalidToken
         |> commitOnSuccess
 
-    let parseLine =
-        IndentationParser.parse .>>. zeroOrMore (parseToken .>> maybeSkipWhitespace)
+    let parseLineWithTokens =
+        IndentationParser.parse .>>. oneOrMore (parseToken .>> maybeSkipWhitespace)
         >> ParseResult.mapValue (fun (l, r) -> l @ r)
-        
+
+    let parseEmptyLine =
+        maybeSkipWhitespace
+        >> ParseResult.mapValue (fun _ -> [])
+
+    let parseLine =
+        parseLineWithTokens
+        |> orElse parseEmptyLine
+
     let terminateBlocks result =
         match result with
         | Ok s ->
@@ -65,7 +74,7 @@ let private parseReader (reader : StreamReader) =
     let parse =
         zeroOrMoreDelimited skipNewLine parseLine
         >> terminateBlocks
-        >> ParseResult.mapValue (List.concat)
+        >> ParseResult.mapValue List.concat
 
     match parse (tape, TokenizerState.initial) with
     | Ok ok -> ok.value
