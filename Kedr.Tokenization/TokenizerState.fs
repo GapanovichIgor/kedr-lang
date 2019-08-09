@@ -1,16 +1,16 @@
 namespace Kedr.Tokenization
 
-type IndentationStyle =
+type internal IndentationStyle =
     | Space
     | Tab
     | Mixed
 
 [<Struct>]
-type TokenizerState =
+type internal TokenizerState =
     { indentationLevels : int list
       indentationStyle : IndentationStyle option }
 
-module TokenizerState =
+module internal TokenizerState =
     let initial =
         { indentationLevels = []
           indentationStyle = None }

@@ -1,6 +1,6 @@
 module internal Kedr.Tokenization.Utils
 
-let inline getSubArray startInd length (collection: array<_>) =
+let inline internal getSubArray startInd length (collection: array<_>) =
     assert (startInd + length <= collection.Length)
 
     let result = Array.zeroCreate length

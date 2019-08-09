@@ -1,6 +1,5 @@
 module Kedr.Tokenization.Tokenizer
 
-open Kedr
 open ParserComposition
 open ParserPrimitives
 open System.IO

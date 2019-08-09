@@ -1,7 +1,7 @@
 namespace Kedr.Tokenization
 
 [<Struct>]
-type ParseSuccess<'v, 's> =
+type internal ParseSuccess<'v, 's> =
     { value: 'v
       state: 's
       length: int }

@@ -1,6 +1,5 @@
 module internal Kedr.Tokenization.IndentationParser
 
-open Kedr
 open ParserPrimitives
 open WhiteSpace
 
