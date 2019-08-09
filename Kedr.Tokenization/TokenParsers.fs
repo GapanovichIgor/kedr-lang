@@ -44,6 +44,10 @@ let parenClose<'s> : TokenParser<'s> = constToken ")" ParenClose
 
 let hardBreak<'s> : TokenParser<'s> = constToken ";" HardBreak
 
+let squareBracketOpen<'s> : TokenParser<'s> = constToken "[" SquareBracketOpen
+
+let squareBracketClose<'s> : TokenParser<'s> = constToken "]" SquareBracketClose
+
 let identifier<'s> : TokenParser<'s> =
     let firstCharCond c =
         Char.IsLetter c ||

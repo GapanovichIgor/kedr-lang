@@ -11,6 +11,8 @@ type Token =
     | NotEquals
     | ParenOpen
     | ParenClose
+    | SquareBracketOpen
+    | SquareBracketClose
     | Identifier of string
     | Number of integerPart:uint32 * fractionalPart: uint32 option
     | QuotedString of contents:string

@@ -40,6 +40,8 @@ let private parseReader (reader : StreamReader) =
             notEquals
             parenOpen
             parenClose
+            squareBracketOpen
+            squareBracketClose
             hardBreak
 
             number

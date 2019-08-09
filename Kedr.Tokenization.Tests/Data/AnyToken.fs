@@ -52,6 +52,8 @@ module AnyToken =
             constGen "/="
             constGen "("
             constGen ")"
+            constGen "["
+            constGen "]"
             constGen ";"
         ]
 

@@ -86,6 +86,16 @@ module Properties =
 
         parse ")" == [ TK.ParenClose ]
 
+    let [<Fact>] ``square bracket open is parsed as such``
+        () =
+
+        parse "[" == [ TK.SquareBracketOpen ]
+
+    let [<Fact>] ``square bracket close is parsed as such``
+        () =
+
+        parse "]" == [ TK.SquareBracketClose ]
+
     let [<Fact>] ``hard break is parsed as such``
         () =
 
