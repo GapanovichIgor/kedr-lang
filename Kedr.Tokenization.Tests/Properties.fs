@@ -19,7 +19,9 @@ type private TK = Token
 
 [<Properties(Arbitrary = [| typeof<Arbs> |])>]
 module Properties =
-    let private parse = fun source -> Tokenizer.parseString source
+    let private parse source =
+        let parseResult = Tokenizer.parseString source
+        parseResult.tokens
 
     let [<Property>] ``number is parsed as such``
         (Number''(text, i, f)) =
@@ -179,7 +181,7 @@ module Properties =
 
         parse (ind + tok1 + nl + ind + tok2) == (parse tok1) @ [ TK.SoftBreak ] @ (parse tok2)
 
-    let [<Property>] ``empty line does not affect block formation``
+    let [<Property>] ``empty or whitespace-only line does not affect block formation``
         (Indentation' ind1)
         (Indentation' ind2)
         (AnyToken' tok1)
@@ -187,7 +189,11 @@ module Properties =
         (AnyToken' tok2)
         (NewLine' nl) =
 
-        parse (ind1 + tok1 + nl + ind2 + ws + nl + ind1 + tok2) == (parse tok1) @ [ TK.SoftBreak ] @ (parse tok2)
+        let expectation = (parse tok1) @ [ TK.SoftBreak ] @ (parse tok2)
+
+        (parse (ind1 + tok1 + nl + ind2 + ws + nl + ind1 + tok2) == expectation) .&.
+        (parse (ind1 + tok1 + nl + ind2 (**) + nl + ind1 + tok2) == expectation) .&.
+        (parse (ind1 + tok1 + nl (*       *) + nl + ind1 + tok2) == expectation)
 
     let [<Fact>] ``arbitrary example test``
         () =

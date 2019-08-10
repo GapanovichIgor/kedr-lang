@@ -13,6 +13,7 @@
     <Compile Include="TokenizerState.fs" />
     <Compile Include="TokenParsers.fs" />
     <Compile Include="IndentationParser.fs" />
+    <Compile Include="TokenizerResult.fs" />
     <Compile Include="Tokenizer.fs" />
   </ItemGroup>
 </Project>

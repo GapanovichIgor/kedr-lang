@@ -79,19 +79,23 @@ let private parseReader (reader : StreamReader) =
         >> ParseResult.mapValue List.concat
 
     match parse (tape, TokenizerState.initial) with
-    | Ok ok -> ok.value
-    | Error _ -> []
+    | Ok ok ->
+        { tokens = ok.value
+          isIndentWhitespaceMixed = ok.state.indentationStyle = Some IndentationStyle.Mixed }
+    | Error _ ->
+        assert false
+        { tokens = []; isIndentWhitespaceMixed = false }
 
 
-let parse (stream : Stream) : Token list =
+let parse (stream : Stream) : TokenizerResult =
     let reader = new StreamReader(stream)
     parseReader reader
 
-let parseEnc (encoding : Encoding) (stream : Stream) : Token list =
+let parseEnc (encoding : Encoding) (stream : Stream) : TokenizerResult =
     let reader = new StreamReader(stream, encoding)
     parseReader reader
 
-let parseString (str : string) : Token list =
+let parseString (str : string) : TokenizerResult =
     let encoding = Encoding.Unicode
     let bytes = encoding.GetBytes str
     let ms = new MemoryStream(bytes)
