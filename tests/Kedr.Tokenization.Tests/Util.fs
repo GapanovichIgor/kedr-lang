@@ -1,4 +1,4 @@
-module Kedr.Tokenization.Tests.Util
+module internal Kedr.Tokenization.Tests.Util
 open FsCheck
 open FsCheck.Xunit
 open System

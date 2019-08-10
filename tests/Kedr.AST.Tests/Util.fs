@@ -1,4 +1,4 @@
-module Kedr.AST.Tests.Util
+module internal Kedr.AST.Tests.Util
 open FsCheck
 open FsCheck.Xunit
 
