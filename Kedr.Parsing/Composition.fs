@@ -1,4 +1,4 @@
-module internal Kedr.Tokenization.ParserComposition
+module Kedr.Parsing.Composition
 
 let inline private combine valueSelector p1 p2 =
     fun (tape: Tape<_>, state) ->
@@ -15,16 +15,16 @@ let inline private combine valueSelector p1 p2 =
                 Error e
         | Error e -> Error e
 
-let (>>.) (p1: Parser<'i, 's, _>) (p2: Parser<'i, 's, 'o>): Parser<'i, 's, 'o> =
+let (>>.) (p1: Parser<'i, 's, _, _>) (p2: Parser<'i, 's, 'e, 'o>): Parser<'i, 's, 'e, 'o> =
     combine snd p1 p2
 
-let (.>>) (p1: Parser<'i, 's, 'o>) (p2: Parser<'i, 's, _>): Parser<'i, 's, 'o> =
+let (.>>) (p1: Parser<'i, 's, 'e, 'o>) (p2: Parser<'i, 's, _, _>): Parser<'i, 's, 'e, 'o> =
     combine fst p1 p2
 
-let (.>>.) (p1: Parser<'i, 's, 'o1>) (p2: Parser<'i, 's, 'o2>): Parser<'i, 's, 'o1 * 'o2> =
+let (.>>.) (p1: Parser<'i, 's, 'e, 'o1>) (p2: Parser<'i, 's, 'e, 'o2>): Parser<'i, 's, 'e, 'o1 * 'o2> =
     combine id p1 p2
 
-let chooseFirstLongest (parsers: Parser<'i, 's, 'o> list): Parser<'i, 's, 'o> =
+let chooseFirstLongest (parsers: Parser<'i, 's, 'e, 'o> list): Parser<'i, 's, 'e, 'o> =
     assert (parsers.Length >= 2)
 
     let combine r1 r2 =
@@ -36,9 +36,7 @@ let chooseFirstLongest (parsers: Parser<'i, 's, 'o> list): Parser<'i, 's, 'o> =
                 Ok s1
         | Error _, Ok s2 -> Ok s2
         | Ok s1, Error _ -> Ok s1
-        | Error _, Error _ -> Error()
-
-    let initial = Error()
+        | Error e, Error _ -> Error e
 
     fun (tape, state) ->
         let result =
@@ -51,7 +49,7 @@ let chooseFirstLongest (parsers: Parser<'i, 's, 'o> list): Parser<'i, 's, 'o> =
                 | _ -> ()
 
                 r)
-            |> Seq.fold combine initial
+            |> Seq.reduce combine
 
         match result with
         | Ok s -> tape.MoveForward(s.length)
@@ -59,7 +57,7 @@ let chooseFirstLongest (parsers: Parser<'i, 's, 'o> list): Parser<'i, 's, 'o> =
 
         result
 
-let optional (parser: Parser<'i, 's, 'o>): Parser<'i, 's, 'o option> =
+let optional (parser: Parser<'i, 's, 'e, 'o>): Parser<'i, 's, 'e, 'o option> =
     fun (tape, state) ->
         match parser (tape, state) with
         | Ok o ->
@@ -73,7 +71,7 @@ let optional (parser: Parser<'i, 's, 'o>): Parser<'i, 's, 'o option> =
               length = 0 }
             |> Ok
 
-let zeroOrMore (parser: Parser<'i, 's, 'o>): Parser<'i, 's, 'o list> =
+let zeroOrMore (parser: Parser<'i, 's, _, 'o>): Parser<'i, 's, _, 'o list> =
     fun (tape, state) ->
         let mutable keepGoing = true
         let mutable state = state
@@ -90,7 +88,7 @@ let zeroOrMore (parser: Parser<'i, 's, 'o>): Parser<'i, 's, 'o list> =
           length = results |> List.sumBy (fun s -> s.length) }
         |> Ok
 
-let zeroOrMoreDelimited (delimiter: Parser<'i, 's, _>) (parser: Parser<'i, 's, 'o>): Parser<'i, 's, 'o list> =
+let zeroOrMoreDelimited (delimiter: Parser<'i, 's, _, _>) (parser: Parser<'i, 's, 'e, 'o>): Parser<'i, 's, 'e, 'o list> =
     fun (tape, state) ->
         let mutable keepGoing = true
         let mutable moreRequired = false
@@ -121,7 +119,7 @@ let zeroOrMoreDelimited (delimiter: Parser<'i, 's, _>) (parser: Parser<'i, 's, '
               length = results |> List.sumBy (fun s -> s.length) }
             |> Ok
 
-let oneOrMore (parser: Parser<'i, 's, 'o>): Parser<'i, 's, 'o list> =
+let oneOrMore (parser: Parser<'i, 's, 'e, 'o>): Parser<'i, 's, 'e, 'o list> =
     fun (tape, state) ->
         let mutable keepGoing = true
         let mutable error = None
@@ -132,7 +130,7 @@ let oneOrMore (parser: Parser<'i, 's, 'o>): Parser<'i, 's, 'o list> =
                   | Ok o ->
                       yield o
                       state <- state
-                  | e ->
+                  | Error e ->
                       error <- Some e
                       keepGoing <- false ]
 
@@ -142,15 +140,15 @@ let oneOrMore (parser: Parser<'i, 's, 'o>): Parser<'i, 's, 'o list> =
               length = results |> List.sumBy (fun s -> s.length) }
             |> Ok
         else
-            Error()
+            Error (Option.get error)
 
-let orElse (fallbackParser: Parser<'i, 's, 'o>) (mainParser: Parser<'i, 's, 'o>): Parser<'i, 's, 'o> =
+let orElse (fallbackParser: Parser<'i, 's, 'e, 'o>) (mainParser: Parser<'i, 's, _, 'o>): Parser<'i, 's, 'e, 'o> =
     fun (tape, state) ->
         match mainParser (tape, state) with
         | Error _ -> fallbackParser (tape, state)
-        | r -> r
+        | Ok o -> Ok o
 
-let commitOnSuccess (parser: Parser<'i, 's, 'o>): Parser<'i, 's, 'o> =
+let commitOnSuccess (parser: Parser<'i, 's, 'e, 'o>): Parser<'i, 's, 'e, 'o> =
     fun (tape, state) ->
         let r = parser (tape, state)
         match r with

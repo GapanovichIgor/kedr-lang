@@ -1,6 +1,7 @@
 module internal Kedr.Tokenization.IndentationParser
 
-open ParserPrimitives
+open Kedr.Parsing
+open Kedr.Parsing.Primitives
 open WhiteSpace
 
 let [<Literal>] private tabSize = 4
@@ -18,7 +19,7 @@ let inline private getNewStyle (chars : char array) =
         elif chars.[0] = ' ' then Some Space
         else Some Tab
 
-let parse (tape : Tape<char>, state : TokenizerState) : ParseResult<Token list, TokenizerState> =
+let parse (tape : Tape<char>, state : TokenizerState) : ParseResult<Token list, TokenizerState, PrimitiveError<char>> =
     let p = zeroOrMoreCond isWhiteSpace
 
     match p (tape, state) with

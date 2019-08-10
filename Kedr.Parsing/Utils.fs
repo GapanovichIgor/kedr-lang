@@ -1,4 +1,4 @@
-module internal Kedr.Tokenization.Utils
+module internal Kedr.Parsing.Utils
 
 let inline internal getSubArray startInd length (collection: array<_>) =
     assert (startInd + length <= collection.Length)
@@ -9,3 +9,7 @@ let inline internal getSubArray startInd length (collection: array<_>) =
         result.[i] <- collection.[i + startInd]
 
     result
+
+type Either<'a, 'b> =
+    | Left of 'a
+    | Right of 'b

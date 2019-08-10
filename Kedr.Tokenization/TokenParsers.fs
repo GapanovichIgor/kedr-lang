@@ -1,14 +1,15 @@
 module internal Kedr.Tokenization.TokenParsers
-open ParserComposition
-open ParserPrimitives
+open Kedr.Parsing
+open Kedr.Parsing.Composition
+open Kedr.Parsing.Primitives
 open System
 open WhiteSpace
 
-type private TokenParser<'s> = Parser<char, 's, Token>
+type private TokenParser<'s> = Parser<char, 's, PrimitiveError<char>, Token>
 
 let private parseResultMapConst x = ParseResult.mapValue (fun _ -> x)
 
-let private constParser (str : string) : Parser<char, 's, unit> =
+let private constParser (str : string) : Parser<char, 's, PrimitiveError<char>, unit> =
     assert (str.Length > 0)
 
     if str.Length = 1 then

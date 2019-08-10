@@ -1,10 +1,9 @@
-namespace Kedr.Tokenization
+namespace Kedr.Parsing
 open System
 open Utils
 
-type internal Tape<'a>(getNext: unit -> 'a option) =
-
-    let mutable buffer = Array.zeroCreate<'a> (4096)
+type Tape<'a>(initialBufferSize, getNext: unit -> 'a option) =
+    let mutable buffer = Array.zeroCreate<'a> (initialBufferSize)
     let mutable windowStart = 0
     let mutable windowEnd = 0
     let mutable headPos = -1
@@ -71,7 +70,7 @@ type internal Tape<'a>(getNext: unit -> 'a option) =
         assert (count >= 0)
         headPos <- headPos - count
         assert (headPos >= windowStart - 1)
-
+    
     member __.Consume(count): 'a array =
         assert (count >= 0)
 

@@ -1,7 +1,8 @@
 module Kedr.Tokenization.Tokenizer
 
-open ParserComposition
-open ParserPrimitives
+open Kedr.Parsing
+open Kedr.Parsing.Primitives
+open Kedr.Parsing.Composition
 open System.IO
 open System.Text
 open TokenParsers
@@ -14,7 +15,7 @@ let private parseReader (reader : StreamReader) =
         then None
         else Some(char i)
 
-    let tape = Tape(readChar)
+    let tape = Tape(4096, readChar)
 
     let maybeSkipWhitespace = skipZeroOrMoreCond isWhiteSpace |> commitOnSuccess
 
