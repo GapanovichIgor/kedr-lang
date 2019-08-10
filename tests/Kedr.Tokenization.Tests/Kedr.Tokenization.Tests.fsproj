@@ -29,7 +29,7 @@
     </ItemGroup>
 
     <ItemGroup>
-      <ProjectReference Include="..\Kedr.Tokenization\Kedr.Tokenization.fsproj" />
+      <ProjectReference Include="..\..\src\Kedr.Tokenization\Kedr.Tokenization.fsproj" />
     </ItemGroup>
 
 </Project>

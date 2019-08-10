@@ -21,7 +21,7 @@
     </ItemGroup>
 
     <ItemGroup>
-      <ProjectReference Include="..\Kedr.AST\Kedr.AST.fsproj" />
+      <ProjectReference Include="..\..\src\Kedr.AST\Kedr.AST.fsproj" />
     </ItemGroup>
 
 </Project>
