@@ -59,6 +59,23 @@ let skipOne<'i, 's when 'i : equality> (item : 'i) (tape : Tape<'i>, state : 's)
         tape.MoveBack(1)
         Error UnexpectedEndOfStream
 
+let tryMapOne (map : 'i -> 'o option) (tape : Tape<'i>, state : 's) : ParseResult<'o, 's, PrimitiveError<'i>> =
+    tape.MoveNext()
+    match tape.Current with
+    | Some i ->
+        match map i with
+        | Some result ->
+            { value = result
+              state = state
+              length = 1 }
+            |> Ok
+        | None ->
+            tape.MoveBack(1)
+            Error(UnexpectedItem i)
+    | None ->
+        tape.MoveBack(1)
+        Error UnexpectedEndOfStream
+
 let zeroOrMoreCond<'i, 's> (cond : 'i -> bool) (tape : Tape<'i>, state : 's) : ParseResult<'i array, 's, PrimitiveError<'i>> =
     let rec loop advanceCount =
         tape.MoveNext()

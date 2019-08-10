@@ -9,15 +9,7 @@
 
     <ItemGroup>
         <Compile Include="Util.fs" />
-        <Compile Include="Data\Whitespace.fs" />
-        <Compile Include="Data\Indentation.fs" />
-        <Compile Include="Data\NewLine.fs" />
-        <Compile Include="Data\Number.fs" />
-        <Compile Include="Data\QuotedString.fs" />
-        <Compile Include="Data\Identifier.fs" />
-        <Compile Include="Data\AnyToken.fs" />
-        <Compile Include="Arbs.fs" />
-        <Compile Include="Tokenizer.Properties.fs" />
+        <Compile Include="ASTParser.Properties.fs" />
         <Compile Include="Program.fs" />
     </ItemGroup>
 
@@ -29,7 +21,7 @@
     </ItemGroup>
 
     <ItemGroup>
-      <ProjectReference Include="..\Kedr.Tokenization\Kedr.Tokenization.fsproj" />
+      <ProjectReference Include="..\Kedr.AST\Kedr.AST.fsproj" />
     </ItemGroup>
 
 </Project>

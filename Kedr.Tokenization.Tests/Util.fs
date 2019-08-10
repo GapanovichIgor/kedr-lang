@@ -1,5 +1,6 @@
 module Kedr.Tokenization.Tests.Util
 open FsCheck
+open FsCheck.Xunit
 open System
 
 let escapeChar c =
@@ -17,3 +18,6 @@ let escapeString s =
     |> String.Concat
     
 let (==) x y = x = y |@ sprintf "%A = %A" x y
+
+type PropertyOnceAttribute() =
+    inherit PropertyAttribute(MaxTest = 1)
