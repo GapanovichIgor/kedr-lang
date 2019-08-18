@@ -9,6 +9,8 @@
 
     <ItemGroup>
         <Compile Include="Util.fs" />
+        <Compile Include="Data\Identifier.fs" />
+        <Compile Include="Arbs.fs" />
         <Compile Include="ASTParser.Properties.fs" />
         <Compile Include="Program.fs" />
     </ItemGroup>

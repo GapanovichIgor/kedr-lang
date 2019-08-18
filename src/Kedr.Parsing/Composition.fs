@@ -24,7 +24,7 @@ let (.>>) (p1: Parser<'i, 's, 'e, 'o>) (p2: Parser<'i, 's, _, _>): Parser<'i, 's
 let (.>>.) (p1: Parser<'i, 's, 'e, 'o1>) (p2: Parser<'i, 's, 'e, 'o2>): Parser<'i, 's, 'e, 'o1 * 'o2> =
     combine id p1 p2
 
-let chooseFirstLongest (parsers: Parser<'i, 's, 'e, 'o> list): Parser<'i, 's, 'e, 'o> =
+let chooseFirstLongest (parsers: Parser<'i, 's, 'e, 'o> list): Parser<'i, 's, 'e list, 'o> =
     assert (parsers.Length >= 2)
 
     let combine r1 r2 =
@@ -36,7 +36,7 @@ let chooseFirstLongest (parsers: Parser<'i, 's, 'e, 'o> list): Parser<'i, 's, 'e
                 Ok s1
         | Error _, Ok s2 -> Ok s2
         | Ok s1, Error _ -> Ok s1
-        | Error e, Error _ -> Error e
+        | Error es, Error e -> Error (e :: es)
 
     fun (tape, state) ->
         let result =
@@ -49,13 +49,36 @@ let chooseFirstLongest (parsers: Parser<'i, 's, 'e, 'o> list): Parser<'i, 's, 'e
                 | _ -> ()
 
                 r)
-            |> Seq.reduce combine
+            |> Seq.fold combine (Error [])
 
         match result with
         | Ok s -> tape.MoveForward(s.length)
         | _ -> ()
 
         result
+        
+let chooseFirst (parsers: Parser<'i, 's, 'e, 'o> list): Parser<'i, 's, 'e list, 'o> =
+    assert (parsers.Length >= 2)
+    
+    fun (tape, state) ->
+        let mutable errors = []
+        
+        let firstSuccess =
+            parsers
+            |> Seq.choose (fun p ->
+                let r = p (tape, state)
+                
+                match r with
+                | Error e ->
+                    errors <- e :: errors
+                    None    
+                | Ok s ->
+                    Some s)
+            |> Seq.tryHead
+        
+        match firstSuccess with
+        | Some s -> Ok s
+        | None -> Error errors
 
 let optional (parser: Parser<'i, 's, 'e, 'o>): Parser<'i, 's, 'e, 'o option> =
     fun (tape, state) ->

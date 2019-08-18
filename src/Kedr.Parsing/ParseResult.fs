@@ -17,3 +17,8 @@ module ParseResult =
               length = ok.length }
             |> Ok
         | Error e -> Error e
+        
+    let mapError (f :'a -> 'b) (r: ParseResult<_, _, 'a>): ParseResult<_, _, 'b> =
+        match r with
+        | Ok ok -> Ok ok
+        | Error e -> Error (f e)
