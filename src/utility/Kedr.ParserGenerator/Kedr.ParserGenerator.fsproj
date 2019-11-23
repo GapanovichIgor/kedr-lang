@@ -5,8 +5,10 @@
     </PropertyGroup>
 
     <ItemGroup>
+        <Compile Include="Utils.fs" />
         <Compile Include="Symbol.fs" />
         <Compile Include="Production.fs" />
+        <Compile Include="ProductionState.fs" />
         <Compile Include="LALRGenerator.fs" />
     </ItemGroup>
 

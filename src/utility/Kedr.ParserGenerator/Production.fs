@@ -1,9 +1,19 @@
 namespace Kedr.ParserGenerator
+open System.Diagnostics
 
+[<DebuggerDisplay("{ToString()}")>]
 type Production = {
     from : Symbol
     into : Symbol list
     }
+    with
+    override this.ToString() =
+        let result =
+            this.into
+            |> Seq.map string
+            |> String.concat " "
+
+        sprintf "%A 🠚 %s" this.from result
 
 [<AutoOpen>]
 module ProductionOp =
