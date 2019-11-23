@@ -12,6 +12,7 @@ type private T = Token
 
 type private ParseTree =
     | Token of Token
+    | ValueExpr of ValueAtom
     | QuotedString of string
     | Identifier of string
     | Expression of ParseTree
@@ -21,8 +22,8 @@ type private P = ParseTree
 
 let private reduceProduction symbols =
     match symbols with
-    | [ Token (T.QuotedString s) ] -> P.QuotedString s |> Some
-    | [ Token (T.Identifier i) ] -> P.Identifier i |> Some
+    | [ P.Token (T.QuotedString s) ] -> ValueAtom.StringLiteral s |> P.ValueExpr |> Some
+    | [ P.Token (T.Identifier i) ] -> ValueAtom.IdentifierRef P.Identifier i |> Some
     | [ P.QuotedString s ] -> P.QuotedString s |> P.Expression |> Some
     | [ P.Identifier i ] -> P.Identifier i |> P.Expression |> Some
     | [ P.PostfixApplication (fn, arg) ] -> P.PostfixApplication (fn, arg) |> P.Expression |> Some
@@ -60,8 +61,8 @@ let private getParseTree (tokens : Token seq) =
 let rec private parseTreeToAST pTree =
     match pTree with
     | P.Token _ -> Error TokensLeftInParseTree
-    | P.QuotedString s -> Ok (ValueExpr.StringLiteral s)
-    | P.Identifier i -> Ok (ValueExpr.IdentifierRef i)
+    | P.QuotedString s -> Ok (ValueAtom.StringLiteral s)
+    | P.Identifier i -> Ok (ValueAtom.IdentifierRef i)
     | P.Expression p -> parseTreeToAST p
     | P.PostfixApplication (P.Expression p1, P.Expression p2) ->
         parseTreeToAST p1 |> Result.bind (fun p1 ->
@@ -69,7 +70,7 @@ let rec private parseTreeToAST pTree =
                 ValueExpr.FunctionApplication (p1, p2)))
     | _ -> Error InvalidParseTreeNode
 
-let parse (tokens : Token seq) : Result<ValueExpr, Error> =
+let parse (tokens : Token seq) : Result<ValueAtom, Error> =
     let parseTree = getParseTree tokens
 
     let ast = parseTree |> Result.bind parseTreeToAST
