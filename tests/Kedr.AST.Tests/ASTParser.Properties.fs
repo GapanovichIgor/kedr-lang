@@ -8,6 +8,9 @@ type private TK = Kedr.Tokenization.Token
 
 let private parse tokens = ASTParser.parse tokens
 
+let [<PropertyOnce>] test () =
+    
+
 let [<PropertyOnce>] ``expression of identifier reference is parsed as such``
     () =
     parse [ TK.Identifier "i" ] == Ok (IdentifierRef "i")

@@ -12,6 +12,6 @@
     <Compile Include="Tokenizer.fs" />
   </ItemGroup>
   <ItemGroup>
-    <ProjectReference Include="..\Kedr.Parsing\Kedr.Parsing.fsproj" />
+    <ProjectReference Include="..\utility\Kedr.ParserCombinator\Kedr.ParserCombinator.fsproj" />
   </ItemGroup>
 </Project>

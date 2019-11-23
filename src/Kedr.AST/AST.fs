@@ -21,3 +21,5 @@ type PrefixApplication =
 type InfixApplication =
     | Start of PrefixApplication
     | NextOp of operator : TODO * left : InfixApplication * right : PrefixApplication
+
+type AST = InfixApplication
