@@ -5,14 +5,13 @@
     </PropertyGroup>
 
     <ItemGroup>
-        <Compile Include="Library.fs" />
         <Compile Include="AST.fs" />
-        <Compile Include="Production.fs" />
         <Compile Include="ASTParser.fs" />
     </ItemGroup>
 
     <ItemGroup>
       <ProjectReference Include="..\Kedr.Tokenization\Kedr.Tokenization.fsproj" />
+      <ProjectReference Include="..\utility\Kedr.ParserGenerator\Kedr.ParserGenerator.fsproj" />
     </ItemGroup>
 
 </Project>

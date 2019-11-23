@@ -1,31 +1,4 @@
-module Kedr.AST
-open System
-
-type private Symbol = Symbol of Guid
-
-type private Production = {
-    from : Symbol
-    into : Symbol list
-    }
-
-let private symbol () = Symbol (Guid.NewGuid())
-
-let private ident = symbol()
-let private quot_str = symbol()
-let private num = symbol()
-
-let private VAL_ATOM = symbol()
-let private PREFIX_APP = symbol()
-
-let private (=>) from into = { from = from; into = into }
-
-let private productions = [
-    PREFIX_APP => [ VAL_ATOM ]
-    PREFIX_APP => [ PREFIX_APP; VAL_ATOM ]
-    VAL_ATOM => [ quot_str ]
-    VAL_ATOM => [ num ]
-    VAL_ATOM => [ ident ]
-    ]
+﻿module Kedr.ParserGenerator.LALRGenerator
 
 type private ProductionState = {
     production : Production
@@ -69,11 +42,35 @@ let private createLr0Goto initialState =
 
     createGoto [ initialState ] [ initialState ] Map.empty
 
-let private lr0Automaton productions =
-    let initialState = [ for prod in productions -> { production = prod; cursorOffset = 0 } ]
+let private createLr0Automaton startingSymbol productions =
+    let initialState =
+        productions
+        |> Seq.filter (fun prod -> prod.from = startingSymbol)
+        |> Seq.map (fun prod -> { production = prod; cursorOffset = 0 })
+        |> List.ofSeq
 
     let goto = createLr0Goto initialState
 
     ()
 
-let test = lr0Automaton productions
+let generate (productions : Production list) =
+    let nonTerminals =
+        productions
+        |> Seq.map (fun prod -> prod.from)
+        |> Seq.distinct
+        |> List.ofSeq
+
+    let producedSymbols =
+        productions
+        |> Seq.collect (fun prod -> prod.into)
+        |> Seq.distinct
+        |> Seq.toList
+
+    let startingSymbol =
+        nonTerminals
+        |> Seq.except producedSymbols
+        |> Seq.exactlyOne
+
+    let lr0 = createLr0Automaton startingSymbol productions
+
+    failwith "TODO"

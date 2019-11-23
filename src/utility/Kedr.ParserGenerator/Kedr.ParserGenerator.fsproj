@@ -5,7 +5,9 @@
     </PropertyGroup>
 
     <ItemGroup>
-        <Compile Include="Library.fs"/>
+        <Compile Include="Symbol.fs" />
+        <Compile Include="Production.fs" />
+        <Compile Include="LALRGenerator.fs" />
     </ItemGroup>
 
 </Project>
