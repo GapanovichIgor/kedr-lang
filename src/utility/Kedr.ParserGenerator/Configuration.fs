@@ -2,7 +2,7 @@ namespace Kedr.ParserGenerator
 open System.Diagnostics
 
 [<DebuggerDisplay("{ToString()}")>]
-type ProductionState = {
+type Configuration = {
     production : Production
     cursorOffset : int
     }
@@ -13,7 +13,7 @@ type ProductionState = {
             this.production with
                 into =
                     this.production.into
-                    |> List.insert ProductionState.interpunct this.cursorOffset
+                    |> List.insert Configuration.interpunct this.cursorOffset
             }
 
         p.ToString()
