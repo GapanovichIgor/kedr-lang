@@ -13,7 +13,7 @@ type Production = {
             |> Seq.map string
             |> String.concat " "
 
-        sprintf "%A 🠚 %s" this.from result
+        sprintf "%s 🠚 %s" (string this.from) result
 
 [<AutoOpen>]
 module ProductionOp =
