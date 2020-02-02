@@ -14,3 +14,11 @@ module List =
                 insert' x (pos - 1) (head @ [ tail.Head ]) tail.Tail
 
         insert' x pos [] list
+
+[<AutoOpen>]
+module Prelude =
+    type OptionBuilder() =
+        member __.Bind(opt, f) = Option.bind f opt
+        member __.Return(x) = Some x
+
+    let option = OptionBuilder()

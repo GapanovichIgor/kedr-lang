@@ -3,14 +3,14 @@ module rec Kedr.AST.ASTParser
 open Kedr.Tokenization
 open Kedr.ParserGenerator
 
-let private ident = Symbol.create "ident"
-let private quot_str = Symbol.create "quot_str"
-let private num = Symbol.create "num"
+let private ident = Symbol "ident"
+let private quot_str = Symbol "quot_str"
+let private num = Symbol "num"
 
-let private VAL_ATOM = Symbol.create "VAL_ATOM"
-let private PREFIX_APP = Symbol.create "PREFIX_APP"
+let private VAL_ATOM = Symbol "VAL_ATOM"
+let private PREFIX_APP = Symbol "PREFIX_APP"
 
-let private S = Symbol.create "S"
+let private S = Symbol "S"
 
 let private productions = [
     S => [ PREFIX_APP ]
@@ -23,21 +23,21 @@ let private productions = [
     ]
 
 let private testProductions =
-    let S = Symbol.create "S"
-    let E = Symbol.create "E"
-    let T = Symbol.create "T"
-    let ``+`` = Symbol.create "+"
-    let ``;`` = Symbol.create ";"
-    let int = Symbol.create "int"
-    let ``(`` = Symbol.create "("
-    let ``)`` = Symbol.create ")"
+    let S = Symbol "S"
+    let E = Symbol "E"
+    let L = Symbol "L"
+    let R = Symbol "R"
+    let id = Symbol "id"
+    let ``*`` = Symbol "*"
+    let ``=`` = Symbol "="
 
     [
         S => [ E ]
-        E => [ T; ``;`` ]
-        E => [ T; ``+``; E ]
-        T => [ int ]
-        T => [ ``(``; E; ``)`` ]
+        E => [ L; ``=``; R ]
+        E => [ R ]
+        L => [ id ]
+        L => [ ``*``; R ]
+        R => [ L ]
     ]
     |> Set.ofList
 
