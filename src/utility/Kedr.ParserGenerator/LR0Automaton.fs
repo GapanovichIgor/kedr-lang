@@ -36,7 +36,6 @@ module LR0Automaton =
         (productions : Production Set)
         (initialState : State)
         : StateTransition Set =
-
         let rec loopCreateTransitions newStates allStates transitions =
             let transitionsOfNewStates =
                 newStates
@@ -62,23 +61,18 @@ module LR0Automaton =
         let nonTerminals =
             productions
             |> Seq.map (fun prod -> prod.from)
-            |> Seq.distinct
-            |> List.ofSeq
+            |> Set.ofSeq
 
         let producedSymbols =
             productions
             |> Seq.collect (fun prod -> prod.into)
-            |> Seq.distinct
-            |> Seq.toList
+            |> Set.ofSeq
 
-        let startingSymbol =
-            nonTerminals
-            |> Seq.except producedSymbols
-            |> Seq.exactlyOne
+        let startingSymbols = nonTerminals - producedSymbols
 
         let initialState = // closed start configurations of S
             productions
-            |> Seq.filter (fun prod -> prod.from = startingSymbol) // TODO without single starting symbol?
+            |> Seq.filter (fun prod -> startingSymbols |> Set.contains prod.from)
             |> Seq.collect (fun prod -> seq {
                 let state = Configuration.createStart prod
                 yield state
