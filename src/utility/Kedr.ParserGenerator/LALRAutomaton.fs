@@ -1,30 +1,16 @@
-﻿module Kedr.ParserGenerator.LALRGenerator
+﻿module Kedr.ParserGenerator.LALRAutomaton
 
-let private createAugmentedGrammar
-    (lr0Automaton : LR0Automaton)
-    (productions : Production Set)
-    : Production Set =
+open Kedr.ParserGenerator
 
-    let nonTerminals =
-        productions
-        |> Seq.map (fun p -> p.from)
-        |> Set.ofSeq
-
-    let states =
-        seq {
-            for tr in lr0Automaton.transitions do
-                yield tr.sourceState
-                yield tr.destinationState
-        } |> Set.ofSeq
-
+let private createAugmentedGrammar (lr0 : LR0Automaton) (grammar : Grammar) : Grammar =
     let stateNumbers =
-        states
+        lr0.states
         |> Seq.mapi (fun i state -> (state, i))
         |> Map.ofSeq
 
     let tryTransition state symbol : State option =
         let transitions =
-            lr0Automaton.transitions
+            lr0.transitions
             |> Seq.filter (fun tr ->
                 tr.sourceState = state &&
                 tr.symbol = symbol)
@@ -48,7 +34,7 @@ let private createAugmentedGrammar
         | symbol :: symbolsRest ->
             let state' = transition state symbol
             let symbol' =
-                if nonTerminals |> Set.contains symbol
+                if grammar.nonTerminals |> Set.contains symbol
                 then createAugmentedSymbol symbol state state'
                 else symbol
 
@@ -58,7 +44,7 @@ let private createAugmentedGrammar
 
     let productions' =
         seq {
-            for state in states do
+            for state in lr0.states do
                 let startConfigs = state.configurations |> Set.filter (fun cfg -> cfg.cursorOffset = 0)
                 for config in startConfigs do
                     // config: A -> . w
@@ -80,12 +66,54 @@ let private createAugmentedGrammar
                     }
         } |> Set.ofSeq
 
-    productions'
+    Grammar.fromProductions productions'
 
-let generate (productions : Production Set) =
+type private FollowingSymbol =
+    | EOF
+    | Symbol of Symbol
 
-    let lr0Automaton = LR0Automaton.generate productions
+let private createFollowSets (grammar : Grammar) : Map<Symbol, FollowingSymbol Set> =
+    let createEmptySetMap () =
+        grammar.symbols
+        |> Seq.map (fun s -> (s, DependentSet()))
+        |> Map.ofSeq
 
-    let augmentedProductions = createAugmentedGrammar lr0Automaton productions
+    let firstSets = createEmptySetMap ()
+
+    for symbol in grammar.terminals do
+        firstSets.[symbol].Add(symbol)
+
+    for production in grammar.productions do
+        let firstOfInto = production.into |> List.head
+        firstSets.[production.from].Add(firstSets.[firstOfInto])
+
+    let firstSets = firstSets |> Map.map (fun _ set -> set.ToSet())
+
+    let followSets = createEmptySetMap ()
+
+    for symbol in grammar.startingSymbols do
+        followSets.[symbol].Add(EOF)
+
+    for production in grammar.productions do
+        let lastOfInto = production.into |> List.last
+        followSets.[lastOfInto].Add(followSets.[production.from])
+
+        production.into
+        |> Seq.pairwise
+        |> Seq.iter (fun (a, b) ->
+            firstSets.[b]
+            |> Seq.map (fun s -> Symbol s)
+            |> Seq.iter followSets.[a].Add)
+
+    let followSets = followSets |> Map.map (fun _ set -> set.ToSet())
+
+    failwith "TODO"
+
+let create (grammar : Grammar) =
+    let lr0 = LR0Automaton.create grammar
+
+    let augmentedGrammar = createAugmentedGrammar lr0 grammar
+
+    let followSet = createFollowSets augmentedGrammar
 
     failwith "TODO"

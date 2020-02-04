@@ -7,13 +7,15 @@
     <ItemGroup>
         <Compile Include="Utils.fs" />
         <Compile Include="Bag.fs" />
+        <Compile Include="DependentSet.fs" />
         <Compile Include="Symbol.fs" />
         <Compile Include="Production.fs" />
+        <Compile Include="Grammar.fs" />
         <Compile Include="Configuration.fs" />
         <Compile Include="State.fs" />
         <Compile Include="StateTransition.fs" />
         <Compile Include="LR0Automaton.fs" />
-        <Compile Include="LALRGenerator.fs" />
+        <Compile Include="LALRAutomaton.fs" />
     </ItemGroup>
 
 </Project>

@@ -22,7 +22,7 @@ let private productions = [
     VAL_ATOM => [ PREFIX_APP ]
     ]
 
-let private testProductions =
+let private testGrammar =
     let S = Symbol "S"
     let E = Symbol "E"
     let L = Symbol "L"
@@ -40,7 +40,8 @@ let private testProductions =
         R => [ L ]
     ]
     |> Set.ofList
+    |> Grammar.fromProductions
 
 let parse (tokens : Token seq) : Result<ValueAtom, unit> =
-    let parser = LALRGenerator.generate testProductions
+    let parser = LALRAutomaton.create testGrammar
     Error ()

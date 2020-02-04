@@ -1,8 +1,12 @@
 namespace Kedr.ParserGenerator
 
-type LR0Automaton = {
-    transitions : StateTransition Set
+type LR0Automaton =
+    private {
+        _transitions : StateTransition Set
+        _states : State Set
     }
+    member this.transitions = this._transitions
+    member this.states = this._states
 
 module LR0Automaton =
     let private createTransitionsOneLevel
@@ -57,30 +61,26 @@ module LR0Automaton =
 
         loopCreateTransitions states states Set.empty
 
-    let generate (productions : Production Set) =
-        let nonTerminals =
-            productions
-            |> Seq.map (fun prod -> prod.from)
-            |> Set.ofSeq
-
-        let producedSymbols =
-            productions
-            |> Seq.collect (fun prod -> prod.into)
-            |> Set.ofSeq
-
-        let startingSymbols = nonTerminals - producedSymbols
-
+    let create (grammar : Grammar) =
         let initialState = // closed start configurations of S
-            productions
-            |> Seq.filter (fun prod -> startingSymbols |> Set.contains prod.from)
+            grammar.productions
+            |> Seq.filter (fun prod -> grammar.startingSymbols |> Set.contains prod.from)
             |> Seq.collect (fun prod -> seq {
                 let state = Configuration.createStart prod
                 yield state
-                yield! Configuration.close productions state
+                yield! Configuration.close grammar.productions state
                 })
             |> Set.ofSeq
             |> fun configs -> { State.configurations = configs }
 
-        let transitions = createTransitions productions initialState
+        let transitions = createTransitions grammar.productions initialState
 
-        { LR0Automaton.transitions = transitions }
+        let states =
+            seq {
+            for tr in transitions do
+                yield tr.sourceState
+                yield tr.destinationState
+            } |> Set.ofSeq
+
+        { _transitions = transitions
+          _states = states }
