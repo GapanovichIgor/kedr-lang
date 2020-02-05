@@ -4,11 +4,11 @@ open Kedr.ParserGenerator
 open System.Diagnostics
 
 [<DebuggerDisplay("{ToString()}")>]
-type internal Configuration<'symbol> =
+type internal Configuration<'symbol when 'symbol : comparison> =
     {
         production : Production<'symbol>
         cursorOffset : int
-        lookahead : 'symbol
+        lookahead : 'symbol Set
     }
     override this.ToString() =
         let str = this.production.ToString()

@@ -79,9 +79,9 @@ module internal Automaton =
 
         let states =
             seq {
-            for tr in transitions do
-                yield tr.sourceState
-                yield tr.destinationState
+                for tr in transitions do
+                    yield tr.sourceState
+                    yield tr.destinationState
             } |> Set.ofSeq
 
         { _transitions = transitions

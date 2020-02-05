@@ -1,5 +1,6 @@
 ﻿namespace Kedr.ParserGenerator.LALR
 
+open System.Collections.Generic
 open Kedr.ParserGenerator
 
 type internal Automaton<'symbol when 'symbol : comparison> =
@@ -14,14 +15,6 @@ module internal Automaton =
     type private AugmentedSymbol<'s when 's : comparison> =
         | PlainSymbol of 's
         | TransitionalSymbol of 's * LR0.State<'s> * LR0.State<'s>
-
-    type private FollowingSymbol<'s> =
-        | EOF
-        | Symbol of 's
-        override this.ToString () =
-            match this with
-            | EOF -> "$"
-            | Symbol s -> s.ToString()
 
     let private createAugmentedGrammar (lr0 : LR0.Automaton<'s>) (grammar : Grammar<'s>) : Grammar<AugmentedSymbol<'s>> =
         let tryTransition state symbol : LR0.State<_> option =
@@ -78,14 +71,18 @@ module internal Automaton =
 
         Grammar.fromProductions productions'
 
-    let private createFollowSets (grammar : Grammar<'s>) : Map<'s, FollowingSymbol<'s> Set> =
-        let firstSets =
+    let private createFollowSets (eof : 's) (grammar : Grammar<AugmentedSymbol<'s>>) : Map<AugmentedSymbol<'s>, 's Set> =
+        let createEmptyMap () =
             grammar.symbols
             |> Seq.map (fun s -> (s, DependentSet<'s>()))
             |> Map.ofSeq
 
+        let firstSets = createEmptyMap ()
+
         for symbol in grammar.terminals do
-            firstSets.[symbol].Add(symbol)
+            match symbol with
+            | PlainSymbol plain -> firstSets.[symbol].Add(plain)
+            | TransitionalSymbol _ -> failwith "Terminal can not be a TransitionalSymbol"
 
         for production in grammar.productions do
             let firstOfInto = production.into |> List.head
@@ -93,13 +90,10 @@ module internal Automaton =
 
         let firstSets = firstSets |> Map.map (fun _ set -> set.ToSet())
 
-        let followSets =
-            grammar.symbols
-            |> Seq.map (fun s -> (s, DependentSet()))
-            |> Map.ofSeq
+        let followSets = createEmptyMap ()
 
         for symbol in grammar.startingSymbols do
-            followSets.[symbol].Add(EOF)
+            followSets.[symbol].Add(eof)
 
         for production in grammar.productions do
             let lastOfInto = production.into |> List.last
@@ -109,16 +103,81 @@ module internal Automaton =
             |> Seq.pairwise
             |> Seq.iter (fun (a, b) ->
                 firstSets.[b]
-                |> Seq.map (fun s -> Symbol s)
                 |> Seq.iter followSets.[a].Add)
 
         followSets |> Map.map (fun _ set -> set.ToSet())
 
-    let create (grammar : Grammar<'s>) : Automaton<'s> =
+    let private addLookahead (lr0 : LR0.Automaton<_>) (followSets : Map<_,_>) : Automaton<_> =
+
+        let rec traceToState state symbols =
+            match symbols with
+            | [] -> state
+            | s :: sRest ->
+                let state' =
+                    lr0.transitions
+                    |> Seq.find (fun tr -> tr.symbol = s && tr.sourceState = state)
+                    |> fun tr -> tr.destinationState
+                traceToState state' sRest
+
+        let lookaheadsByStateAndCfg = Dictionary()
+
+        for state in lr0.states do
+            let startConfigs = state.configurations |> Set.filter (fun c -> c.cursorOffset = 0)
+            for config in startConfigs do
+                // config: A -> . w
+                let A = config.production.from
+                let transitionStateOnA =
+                    lr0.transitions
+                    |> Seq.tryFind (fun tr -> tr.symbol = A && tr.sourceState = state)
+                    |> Option.map (fun tr -> tr.destinationState)
+                let lookahead =
+                    match transitionStateOnA with
+                    | Some trState -> followSets.[TransitionalSymbol(A, state, trState)]
+                    | None -> followSets.[PlainSymbol A]
+
+                let endState = traceToState state config.production.into
+
+                let endConfig = { config with cursorOffset = config.production.into.Length }
+
+                lookaheadsByStateAndCfg.[(endState, endConfig)] <- lookahead
+
+        let toLalrState (lr0State : LR0.State<_>) = {
+            configurations =
+                lr0State.configurations
+                |> Set.map (fun cfg ->
+                    let lookahead = lookaheadsByStateAndCfg.[(lr0State, cfg)]
+                    {
+                        production = cfg.production
+                        cursorOffset = cfg.cursorOffset
+                        lookahead = lookahead
+                    })
+            }
+
+        let transitions =
+            seq {
+                for tr in lr0.transitions do
+                    {
+                        sourceState = toLalrState tr.sourceState
+                        symbol = tr.symbol
+                        destinationState = toLalrState tr.destinationState
+                    }
+            } |> Set.ofSeq
+
+        let states =
+            seq {
+                for tr in transitions do
+                    yield tr.sourceState
+                    yield tr.destinationState
+            } |> Set.ofSeq
+
+        { _transitions = transitions
+          _states = states }
+
+    let create (eof : 's) (grammar : Grammar<'s>) : Automaton<'s> =
         let lr0 = LR0.Automaton.create grammar
 
         let augmentedGrammar = createAugmentedGrammar lr0 grammar
 
-        let followSet = createFollowSets augmentedGrammar
+        let followSets = createFollowSets eof augmentedGrammar
 
-        failwith "TODO"
+        addLookahead lr0 followSets

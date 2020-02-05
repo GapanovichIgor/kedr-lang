@@ -35,5 +35,5 @@ let private testGrammar =
     |> Grammar.fromProductions
 
 let parse (tokens : Token seq) : Result<ValueAtom, unit> =
-    let parser = LALRAutomaton.create testGrammar
+    let parser = Automaton.create testGrammar
     Error ()
