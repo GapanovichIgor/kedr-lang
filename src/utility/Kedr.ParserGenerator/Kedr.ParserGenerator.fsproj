@@ -6,7 +6,6 @@
 
     <ItemGroup>
         <Compile Include="Utils.fs" />
-        <Compile Include="Bag.fs" />
         <Compile Include="DependentSet.fs" />
         <Compile Include="Production.fs" />
         <Compile Include="Grammar.fs" />
