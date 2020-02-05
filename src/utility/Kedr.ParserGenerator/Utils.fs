@@ -1,7 +1,7 @@
 namespace Kedr.ParserGenerator
 open System
 
-module List =
+module internal List =
     let insert x pos list =
         let rec insert' x pos head tail =
             if pos < 0 then
@@ -16,7 +16,7 @@ module List =
         insert' x pos [] list
 
 [<AutoOpen>]
-module Prelude =
+module internal Utils =
     type OptionBuilder() =
         member __.Bind(opt, f) = Option.bind f opt
         member __.Return(x) = Some x

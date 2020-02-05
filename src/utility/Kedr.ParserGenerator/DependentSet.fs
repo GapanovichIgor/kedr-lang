@@ -2,7 +2,7 @@ namespace Kedr.ParserGenerator
 
 open System.Collections.Generic
 
-type private DependentSet<'a when 'a : comparison> () =
+type internal DependentSet<'a when 'a : comparison> () =
     let singleInclusions = HashSet()
     let subSets = HashSet()
 

@@ -9,11 +9,14 @@
         <Compile Include="DependentSet.fs" />
         <Compile Include="Production.fs" />
         <Compile Include="Grammar.fs" />
-        <Compile Include="Configuration.fs" />
-        <Compile Include="State.fs" />
-        <Compile Include="StateTransition.fs" />
-        <Compile Include="LR0Automaton.fs" />
-        <Compile Include="LALRAutomaton.fs" />
+        <Compile Include="LR0\Configuration.fs" />
+        <Compile Include="LR0\State.fs" />
+        <Compile Include="LR0\StateTransition.fs" />
+        <Compile Include="LR0\Automaton.fs" />
+        <Compile Include="LALR\Configuration.fs" />
+        <Compile Include="LALR\State.fs" />
+        <Compile Include="LALR\StateTransition.fs" />
+        <Compile Include="LALR\Automaton.fs" />
     </ItemGroup>
 
 </Project>

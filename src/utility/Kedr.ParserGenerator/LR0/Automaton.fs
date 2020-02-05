@@ -1,6 +1,8 @@
-namespace Kedr.ParserGenerator
+namespace Kedr.ParserGenerator.LR0
 
-type LR0Automaton<'symbol when 'symbol : comparison> =
+open Kedr.ParserGenerator
+
+type internal Automaton<'symbol when 'symbol : comparison> =
     private {
         _transitions : StateTransition<'symbol> Set
         _states : State<'symbol> Set
@@ -8,7 +10,7 @@ type LR0Automaton<'symbol when 'symbol : comparison> =
     member this.transitions = this._transitions
     member this.states = this._states
 
-module LR0Automaton =
+module internal Automaton =
     let private createTransitionsOneLevel
         (productions : Production<_> Set)
         (state : State<_>)

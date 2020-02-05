@@ -1,8 +1,9 @@
-namespace Kedr.ParserGenerator
+namespace Kedr.ParserGenerator.LR0
+open Kedr.ParserGenerator
 open System.Diagnostics
 
 [<DebuggerDisplay("{ToString()}")>]
-type Configuration<'symbol> =
+type internal Configuration<'symbol> =
     {
         production : Production<'symbol>
         cursorOffset : int
@@ -18,7 +19,7 @@ type Configuration<'symbol> =
 
         str.Insert(subProdLen, "·")
 
-module Configuration =
+module internal Configuration =
     let tryAheadSymbol configuration =
         if configuration.production.into.Length > configuration.cursorOffset
         then configuration.production.into.[configuration.cursorOffset] |> Some
