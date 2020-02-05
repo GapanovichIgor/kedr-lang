@@ -1,7 +1,7 @@
 namespace Kedr.ParserGenerator
 
-type StateTransition = {
-    sourceState : State
-    symbol : Symbol
-    destinationState : State
+type StateTransition<'symbol when 'symbol : comparison> = {
+    sourceState : State<'symbol>
+    symbol : 'symbol
+    destinationState : State<'symbol>
     }

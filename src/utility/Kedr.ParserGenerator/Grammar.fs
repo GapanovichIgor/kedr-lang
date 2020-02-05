@@ -1,12 +1,12 @@
 namespace Kedr.ParserGenerator
 
-type Grammar =
+type Grammar<'symbol when 'symbol : comparison> =
     private {
-        _productions : Production Set
-        _symbols : Symbol Set
-        _terminals : Symbol Set
-        _nonTerminals : Symbol Set
-        _startingSymbols : Symbol Set
+        _productions : Production<'symbol> Set
+        _symbols : 'symbol Set
+        _terminals : 'symbol Set
+        _nonTerminals : 'symbol Set
+        _startingSymbols : 'symbol Set
     }
     member this.productions = this._productions
     member this.symbols = this._symbols

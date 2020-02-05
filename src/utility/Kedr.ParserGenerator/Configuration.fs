@@ -2,21 +2,21 @@ namespace Kedr.ParserGenerator
 open System.Diagnostics
 
 [<DebuggerDisplay("{ToString()}")>]
-type Configuration = {
-    production : Production
-    cursorOffset : int
+type Configuration<'symbol> =
+    {
+        production : Production<'symbol>
+        cursorOffset : int
     }
-    with
-    static member private interpunct = Symbol("·")
     override this.ToString() =
-        let p = {
-            this.production with
-                into =
-                    this.production.into
-                    |> List.insert Configuration.interpunct this.cursorOffset
-            }
+        let str = this.production.ToString()
 
-        p.ToString()
+        let subProd = {
+            this.production with
+                into = this.production.into |> List.take this.cursorOffset
+            }
+        let subProdLen = subProd.ToString().Length
+
+        str.Insert(subProdLen, "·")
 
 module Configuration =
     let tryAheadSymbol configuration =
@@ -24,14 +24,14 @@ module Configuration =
         then configuration.production.into.[configuration.cursorOffset] |> Some
         else None
 
-    let createStart (production : Production) : Configuration =
+    let createStart (production : Production<_>) : Configuration<_> =
         { production = production
           cursorOffset = 0 }
 
     let rec close
-        (productions : Production Set)
-        (configuration : Configuration)
-        : Configuration list =
+        (productions : Production<_> Set)
+        (configuration : Configuration<_>)
+        : Configuration<_> list =
         [
             // if configuration is A -> α.Bω where B is non-terminal then
             // get all productions of B at start configuration (B -> .γ)

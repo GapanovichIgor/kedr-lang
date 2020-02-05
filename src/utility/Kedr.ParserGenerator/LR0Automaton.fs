@@ -1,18 +1,18 @@
 namespace Kedr.ParserGenerator
 
-type LR0Automaton =
+type LR0Automaton<'symbol when 'symbol : comparison> =
     private {
-        _transitions : StateTransition Set
-        _states : State Set
+        _transitions : StateTransition<'symbol> Set
+        _states : State<'symbol> Set
     }
     member this.transitions = this._transitions
     member this.states = this._states
 
 module LR0Automaton =
     let private createTransitionsOneLevel
-        (productions : Production Set)
-        (state : State)
-        : StateTransition Set =
+        (productions : Production<_> Set)
+        (state : State<_>)
+        : StateTransition<_> Set =
         seq {
             let nonFinalConfigsByAheadSymbol =
                 state.configurations
@@ -37,9 +37,9 @@ module LR0Automaton =
         |> Set.ofSeq
 
     let private createTransitions
-        (productions : Production Set)
-        (initialState : State)
-        : StateTransition Set =
+        (productions : Production<_> Set)
+        (initialState : State<_>)
+        : StateTransition<_> Set =
         let rec loopCreateTransitions newStates allStates transitions =
             let transitionsOfNewStates =
                 newStates
@@ -61,7 +61,7 @@ module LR0Automaton =
 
         loopCreateTransitions states states Set.empty
 
-    let create (grammar : Grammar) =
+    let create (grammar : Grammar<_>) =
         let initialState = // closed start configurations of S
             grammar.productions
             |> Seq.filter (fun prod -> grammar.startingSymbols |> Set.contains prod.from)

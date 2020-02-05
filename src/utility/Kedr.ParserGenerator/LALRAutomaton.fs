@@ -2,13 +2,12 @@
 
 open Kedr.ParserGenerator
 
-let private createAugmentedGrammar (lr0 : LR0Automaton) (grammar : Grammar) : Grammar =
-    let stateNumbers =
-        lr0.states
-        |> Seq.mapi (fun i state -> (state, i))
-        |> Map.ofSeq
+type private AugmentedSymbol<'s when 's : comparison> =
+    | PlainSymbol of 's
+    | TransitionalSymbol of 's * State<'s> * State<'s>
 
-    let tryTransition state symbol : State option =
+let private createAugmentedGrammar (lr0 : LR0Automaton<_>) (grammar : Grammar<_>) : Grammar<_> =
+    let tryTransition state symbol : State<_> option =
         let transitions =
             lr0.transitions
             |> Seq.filter (fun tr ->
@@ -22,12 +21,6 @@ let private createAugmentedGrammar (lr0 : LR0Automaton) (grammar : Grammar) : Gr
 
     let transition state symbol = tryTransition state symbol |> Option.get
 
-    let createAugmentedSymbol symbol stateFrom stateInto =
-        let (Symbol symbolName) = symbol
-        let stateFromNum = stateNumbers.[stateFrom]
-        let stateIntoNum = stateNumbers.[stateInto]
-        Symbol (sprintf "%s_%i_%i" symbolName stateFromNum stateIntoNum)
-
     let rec traceAndAugmentSymbols state remainingSymbols reverseResult =
         match remainingSymbols with
         | [] -> reverseResult |> List.rev
@@ -35,8 +28,8 @@ let private createAugmentedGrammar (lr0 : LR0Automaton) (grammar : Grammar) : Gr
             let state' = transition state symbol
             let symbol' =
                 if grammar.nonTerminals |> Set.contains symbol
-                then createAugmentedSymbol symbol state state'
-                else symbol
+                then TransitionalSymbol (symbol, state, state')
+                else PlainSymbol symbol
 
             let reverseResult = symbol' :: reverseResult
 
@@ -55,8 +48,8 @@ let private createAugmentedGrammar (lr0 : LR0Automaton) (grammar : Grammar) : Gr
 
                     let A' =
                         match transitionStateOnA with
-                        | None -> A
-                        | Some trState -> createAugmentedSymbol A state trState
+                        | None -> PlainSymbol A
+                        | Some trState -> TransitionalSymbol (A, state, trState)
 
                     let w' = traceAndAugmentSymbols state w []
 
@@ -68,17 +61,19 @@ let private createAugmentedGrammar (lr0 : LR0Automaton) (grammar : Grammar) : Gr
 
     Grammar.fromProductions productions'
 
-type private FollowingSymbol =
+type private FollowingSymbol<'s> =
     | EOF
-    | Symbol of Symbol
+    | Symbol of 's
+    override this.ToString () =
+        match this with
+        | EOF -> "$"
+        | Symbol s -> s.ToString()
 
-let private createFollowSets (grammar : Grammar) : Map<Symbol, FollowingSymbol Set> =
-    let createEmptySetMap () =
+let private createFollowSets (grammar : Grammar<'s>) : Map<'s, FollowingSymbol<'s> Set> =
+    let firstSets =
         grammar.symbols
-        |> Seq.map (fun s -> (s, DependentSet()))
+        |> Seq.map (fun s -> (s, DependentSet<'s>()))
         |> Map.ofSeq
-
-    let firstSets = createEmptySetMap ()
 
     for symbol in grammar.terminals do
         firstSets.[symbol].Add(symbol)
@@ -89,7 +84,10 @@ let private createFollowSets (grammar : Grammar) : Map<Symbol, FollowingSymbol S
 
     let firstSets = firstSets |> Map.map (fun _ set -> set.ToSet())
 
-    let followSets = createEmptySetMap ()
+    let followSets =
+        grammar.symbols
+        |> Seq.map (fun s -> (s, DependentSet()))
+        |> Map.ofSeq
 
     for symbol in grammar.startingSymbols do
         followSets.[symbol].Add(EOF)
@@ -105,11 +103,11 @@ let private createFollowSets (grammar : Grammar) : Map<Symbol, FollowingSymbol S
             |> Seq.map (fun s -> Symbol s)
             |> Seq.iter followSets.[a].Add)
 
-    let followSets = followSets |> Map.map (fun _ set -> set.ToSet())
+    let followSets' = followSets |> Map.map (fun _ set -> set.ToSet())
 
     failwith "TODO"
 
-let create (grammar : Grammar) =
+let create (grammar : Grammar<_>) =
     let lr0 = LR0Automaton.create grammar
 
     let augmentedGrammar = createAugmentedGrammar lr0 grammar
