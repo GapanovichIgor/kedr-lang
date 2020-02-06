@@ -48,11 +48,12 @@ let parseLine (line : string) =
 
 [<EntryPoint>]
 let main argv =
-    if argv.Length < 2 then printf "path to grammar and path to output required"; 1
+    if argv.Length < 3 then printf "arguments required: <path to grammar file> <path to output file> <namespace>"; 1
     else
 
     let grammarFilePath = argv.[0]
     let outputFilePath = argv.[1]
+    let parserNamespace = argv.[2]
 
     let lines = File.ReadAllLines grammarFilePath
 
@@ -75,5 +76,5 @@ let main argv =
     | Ok productions ->
         let grammar = Grammar.fromProductions productions
         use outputFile = File.OpenWrite outputFilePath
-        Generator.generate eof grammar outputFile
+        Generator.generate eof grammar parserNamespace outputFile
         0

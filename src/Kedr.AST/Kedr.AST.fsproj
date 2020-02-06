@@ -6,6 +6,7 @@
 
     <ItemGroup>
         <None Include="Kedr.grammar" />
+        <Compile Include="Parser.fs" />
     </ItemGroup>
 
     <ItemGroup>
