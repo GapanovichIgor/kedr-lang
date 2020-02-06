@@ -1,0 +1,4 @@
+S -> E
+E -> L eq R | R
+L -> id | asterisk R
+R -> L

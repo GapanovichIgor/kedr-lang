@@ -145,7 +145,10 @@ module internal Automaton =
             configurations =
                 lr0State.configurations
                 |> Set.map (fun cfg ->
-                    let lookahead = lookaheadsByStateAndCfg.[(lr0State, cfg)]
+                    let lookahead =
+                        match lookaheadsByStateAndCfg.TryGetValue((lr0State, cfg)) with
+                        | (true, la) -> la
+                        | _ -> Set.empty
                     {
                         production = cfg.production
                         cursorOffset = cfg.cursorOffset

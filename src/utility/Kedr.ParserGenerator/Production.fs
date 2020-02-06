@@ -14,7 +14,3 @@ type Production<'symbol> =
             |> String.concat " "
 
         sprintf "%s 🠚 %s" (this.from.ToString()) result
-
-[<AutoOpen>]
-module ProductionOp =
-    let (=>) from into = { from = from; into = into }

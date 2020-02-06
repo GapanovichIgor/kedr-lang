@@ -19,6 +19,11 @@ type internal Configuration<'symbol when 'symbol : comparison> =
             }
         let subProdLen = subProd.ToString().Length
 
-        let str = str.Insert(subProdLen, "·")
+        let mainPart = str.Insert(subProdLen, "·")
 
-        sprintf "%s [%s]" str (this.lookahead.ToString())
+        let lookahead =
+            this.lookahead
+            |> Seq.map (fun s -> s.ToString())
+            |> String.concat " "
+
+        sprintf "%s [%s]" mainPart lookahead
