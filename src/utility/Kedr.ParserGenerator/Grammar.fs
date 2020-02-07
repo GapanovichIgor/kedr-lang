@@ -2,17 +2,12 @@ namespace Kedr.ParserGenerator
 
 type Grammar<'symbol when 'symbol : comparison> =
     private {
-        _productions : Production<'symbol> Set
-        _symbols : 'symbol Set
-        _terminals : 'symbol Set
-        _nonTerminals : 'symbol Set
-        _startingSymbols : 'symbol Set
+        productions : Production<'symbol> Set
+        symbols : 'symbol Set
+        terminals : 'symbol Set
+        nonTerminals : 'symbol Set
+        startingSymbols : 'symbol Set
     }
-    member this.productions = this._productions
-    member this.symbols = this._symbols
-    member this.terminals = this._terminals
-    member this.nonTerminals = this._nonTerminals
-    member this.startingSymbols = this._startingSymbols
 
 module Grammar =
     let fromProductions productions =
@@ -24,9 +19,9 @@ module Grammar =
         if startingSymbols.IsEmpty then failwith "Invalid grammar: no starting symbols"
 
         {
-            _productions = productions
-            _symbols = terminals + nonTerminals
-            _terminals = terminals
-            _nonTerminals = nonTerminals
-            _startingSymbols = startingSymbols
+            productions = productions
+            symbols = terminals + nonTerminals
+            terminals = terminals
+            nonTerminals = nonTerminals
+            startingSymbols = startingSymbols
         }

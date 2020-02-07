@@ -53,7 +53,7 @@ let main argv =
 
     let grammarFilePath = argv.[0]
     let outputFilePath = argv.[1]
-    let parserNamespace = argv.[2]
+    let parserFullName = argv.[2]
 
     let lines = File.ReadAllLines grammarFilePath
 
@@ -75,6 +75,6 @@ let main argv =
         1
     | Ok productions ->
         let grammar = Grammar.fromProductions productions
-        use outputFile = File.OpenWrite outputFilePath
-        Generator.generate eof grammar parserNamespace outputFile
+        use outputFile = File.Create outputFilePath
+        Generator.generate eof grammar parserFullName outputFile
         0
