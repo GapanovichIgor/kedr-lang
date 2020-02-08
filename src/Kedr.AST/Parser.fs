@@ -14,7 +14,7 @@ type Expr =
 let private recognize token =
     match token with
     | QuotedString content -> T_strlit content
-    | Number(i, f) -> T_numlit (i, f)
+    | Number (i, f) -> T_numlit (i, f)
     | Identifier id -> T_id id
     | ParenOpen -> T_pareno ()
     | ParenClose -> T_parenc ()
