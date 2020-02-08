@@ -85,19 +85,19 @@ let private writeEitherType (grammar : Grammar<_>) writer =
     |> Seq.sort
     |> Seq.iter writer.WriteLine
 
-let private writeParseFunction (grammar : Grammar<_>) writer =
-    let tokenTypeVar =
+let private writeParseFunction (grammar : Grammar<_>) (automaton : LALR.Automaton<_>) writer =
+    let symbolTypeVar =
         let occupiedNames = grammar.symbols |> Set.map symbolToTypeVariable
         let rec go name =
             if occupiedNames.Contains(name)
             then go (name + "_")
             else name
-        go "'token"
+        go "'symbol"
 
-    fprintfn writer "let parse<%s, %s>" tokenTypeVar (typeVariableListOf grammar.symbols)
-    fprintfn writer "    (recognizeTerminal : %s -> Terminal<%s>)" tokenTypeVar (typeVariableListOf grammar.terminals)
+    fprintfn writer "let parse<%s, %s>" symbolTypeVar (typeVariableListOf grammar.symbols)
+    fprintfn writer "    (recognizeTerminal : %s -> Terminal<%s>)" symbolTypeVar (typeVariableListOf grammar.terminals)
     fprintfn writer "    (reducer : Reducer<%s>)" (typeVariableListOf grammar.symbols)
-    fprintfn writer "    (tokens : seq<%s>)" tokenTypeVar
+    fprintfn writer "    (symbols : seq<%s>)" symbolTypeVar
 
     let successResultType =
         if grammar.startingSymbols.Count = 1 then
@@ -106,6 +106,46 @@ let private writeParseFunction (grammar : Grammar<_>) writer =
             let typeVarList = typeVariableListOf grammar.startingSymbols
             sprintf "Either<%s>" typeVarList
     fprintfn writer "    : Result<%s, string> =" successResultType
+    fprintfn writer ""
+
+    let orderedStates =
+        automaton.states
+        |> Seq.sortBy StableSorting.keyOfState
+        |> List.ofSeq
+
+    let startingSymbol =
+        grammar.startingSymbols
+        |> Seq.tryExactlyOne
+        |> Option.defaultWith (fun () -> failwith "mutliple starting symbols are not supported")
+
+    let startingState =
+        automaton.states
+        |> Seq.filter (fun st ->
+            st.configurations
+            |> Seq.exists (fun cfg ->
+                cfg.production.from = startingSymbol &&
+                cfg.cursorOffset = 0))
+        |> Seq.exactlyOne
+
+    fprintfn writer "    let mutable state = %i" (orderedStates |> List.findIndex ((=) startingState))
+    fprintfn writer "    let mutable observedSymbol = Unchecked.defaultof<'symbol>"
+    fprintfn writer "    let mutable observedSymbolIsEof = false"
+    fprintfn writer "    let mutable lookaheadSymbol = Unchecked.defaultof<'symbol>"
+    fprintfn writer "    let mutable lookaheadSymbolIsEof = false"
+    fprintfn writer "    use enumerator = symbols.GetEnumerator()"
+    fprintfn writer "    let shift () ="
+    fprintfn writer "        observedSymbol <- lookaheadSymbol"
+    fprintfn writer "        observedSymbolIsEof <- lookaheadSymbolIsEof"
+    fprintfn writer "        if not lookaheadSymbolIsEof then"
+    fprintfn writer "            if enumerator.MoveNext()"
+    fprintfn writer "            then lookaheadSymbol <- enumerator.Current"
+    fprintfn writer "            else lookaheadSymbolIsEof <- true"
+    fprintfn writer "    shift ()"
+    fprintfn writer "    shift ()"
+    fprintfn writer "    match state with"
+    for (i, state) in orderedStates |> Seq.indexed do
+        fprintfn writer "    | %i -> ()" i
+    fprintfn writer "    | _ -> failwith \"parser is in an invalid state\""
 
     fprintfn writer "    failwith \"TODO\""
 
@@ -129,7 +169,7 @@ let generate (eof : 's) (grammar : Grammar<'s>) (parserFullName : string) (strea
         writeEitherType grammar writer
         fprintfn writer ""
 
-    writeParseFunction grammar writer
+    writeParseFunction grammar automaton writer
 
     writer.Flush()
 

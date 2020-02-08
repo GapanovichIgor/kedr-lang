@@ -1,4 +1,3 @@
-S -> E
-E -> L eq R | R
-L -> id | asterisk R
-R -> L
+S -> EXPR
+EXPR -> id | strlit | numlit
+EXPR -> pareno EXPR parenc

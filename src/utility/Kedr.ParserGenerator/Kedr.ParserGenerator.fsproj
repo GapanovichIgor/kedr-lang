@@ -18,6 +18,7 @@
         <Compile Include="LALR\State.fs" />
         <Compile Include="LALR\StateTransition.fs" />
         <Compile Include="LALR\Automaton.fs" />
+        <Compile Include="StableSorting.fs" />
         <Compile Include="Generator.fs" />
         <Compile Include="Program.fs" />
     </ItemGroup>
