@@ -26,12 +26,17 @@ let parse<'symbol, 'strlit, 'pareno, 'parenc, 'numlit, 'id, 'S, 'EXPR>
     (symbols : seq<'symbol>)
     : Result<'S, string> =
 
+    use enumerator = symbols.GetEnumerator()
     let mutable state = 1
     let mutable observedSymbol = Unchecked.defaultof<'symbol>
     let mutable observedSymbolIsEof = false
     let mutable lookaheadSymbol = Unchecked.defaultof<'symbol>
     let mutable lookaheadSymbolIsEof = false
-    use enumerator = symbols.GetEnumerator()
+    let symbolStack = System.Collections.Stack()
+    let stateStack = System.Collections.Stack()
+    let mutable keepGoing = true
+    let mutable success = false
+
     let shift () =
         observedSymbol <- lookaheadSymbol
         observedSymbolIsEof <- lookaheadSymbolIsEof
@@ -39,16 +44,87 @@ let parse<'symbol, 'strlit, 'pareno, 'parenc, 'numlit, 'id, 'S, 'EXPR>
             if enumerator.MoveNext()
             then lookaheadSymbol <- enumerator.Current
             else lookaheadSymbolIsEof <- true
+
+    let accept () =
+        keepGoing <- false
+        success <- true
+
     shift ()
     shift ()
-    match state with
-    | 0 -> ()
-    | 1 -> ()
-    | 2 -> ()
-    | 3 -> ()
-    | 4 -> ()
-    | 5 -> ()
-    | 6 -> ()
-    | 7 -> ()
-    | _ -> failwith "parser is in an invalid state"
+
+    while keepGoing do
+        match state with
+        | 0 ->
+            if observedSymbolIsEof then failwith "TODO reject" else
+            match recognizeTerminal observedSymbol with
+            | T_id t -> ()
+            | T_numlit t -> ()
+            | T_parenc _ -> failwith "TODO reject"
+            | T_pareno t -> ()
+            | T_strlit t -> ()
+            ()
+        | 1 ->
+            if observedSymbolIsEof then failwith "TODO reject" else
+            match recognizeTerminal observedSymbol with
+            | T_id t -> ()
+            | T_numlit t -> ()
+            | T_parenc _ -> failwith "TODO reject"
+            | T_pareno t -> ()
+            | T_strlit t -> ()
+            ()
+        | 2 ->
+            if observedSymbolIsEof then failwith "TODO reject" else
+            match recognizeTerminal observedSymbol with
+            | T_id _ -> failwith "TODO reject"
+            | T_numlit _ -> failwith "TODO reject"
+            | T_parenc _ -> failwith "TODO reject"
+            | T_pareno _ -> failwith "TODO reject"
+            | T_strlit _ -> failwith "TODO reject"
+            ()
+        | 3 ->
+            if observedSymbolIsEof then failwith "TODO reject" else
+            match recognizeTerminal observedSymbol with
+            | T_id _ -> failwith "TODO reject"
+            | T_numlit _ -> failwith "TODO reject"
+            | T_parenc _ -> failwith "TODO reject"
+            | T_pareno _ -> failwith "TODO reject"
+            | T_strlit _ -> failwith "TODO reject"
+            ()
+        | 4 ->
+            if observedSymbolIsEof then failwith "TODO reject" else
+            match recognizeTerminal observedSymbol with
+            | T_id _ -> failwith "TODO reject"
+            | T_numlit _ -> failwith "TODO reject"
+            | T_parenc t -> ()
+            | T_pareno _ -> failwith "TODO reject"
+            | T_strlit _ -> failwith "TODO reject"
+            ()
+        | 5 ->
+            if observedSymbolIsEof then failwith "TODO reject" else
+            match recognizeTerminal observedSymbol with
+            | T_id _ -> failwith "TODO reject"
+            | T_numlit _ -> failwith "TODO reject"
+            | T_parenc _ -> failwith "TODO reject"
+            | T_pareno _ -> failwith "TODO reject"
+            | T_strlit _ -> failwith "TODO reject"
+            ()
+        | 6 ->
+            if observedSymbolIsEof then failwith "TODO reject" else
+            match recognizeTerminal observedSymbol with
+            | T_id _ -> failwith "TODO reject"
+            | T_numlit _ -> failwith "TODO reject"
+            | T_parenc _ -> failwith "TODO reject"
+            | T_pareno _ -> failwith "TODO reject"
+            | T_strlit _ -> failwith "TODO reject"
+            ()
+        | 7 ->
+            if observedSymbolIsEof then accept () else
+            match recognizeTerminal observedSymbol with
+            | T_id _ -> failwith "TODO reject"
+            | T_numlit _ -> failwith "TODO reject"
+            | T_parenc _ -> failwith "TODO reject"
+            | T_pareno _ -> failwith "TODO reject"
+            | T_strlit _ -> failwith "TODO reject"
+            ()
+        | _ -> failwith "Parser is in an invalid state. This is a bug in parser generator."
     failwith "TODO"
