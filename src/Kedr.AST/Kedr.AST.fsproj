@@ -5,8 +5,9 @@
     </PropertyGroup>
 
     <ItemGroup>
-        <None Include="Kedr.grammar" />
+        <Content Include="ParserDefinition" />
         <Compile Include="ParserImpl.fs" />
+        <Compile Include="AST.fs" />
         <Compile Include="Parser.fs" />
     </ItemGroup>
 

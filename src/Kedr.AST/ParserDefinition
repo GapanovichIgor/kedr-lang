@@ -1,0 +1,11 @@
+S       : Kedr.AST.Expr
+EXPR    : Kedr.AST.Expr
+id      : string
+strlit  : string
+numlit  : (uint32 * uint32 option)
+pareno  : unit
+parenc  : unit
+
+S       -> EXPR
+EXPR    -> id | strlit | numlit
+EXPR    -> pareno EXPR parenc

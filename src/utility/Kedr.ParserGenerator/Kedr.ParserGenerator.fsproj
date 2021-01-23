@@ -20,8 +20,8 @@
         <Compile Include="LALR\Automaton.fs" />
         <Compile Include="ParsingTable.fs" />
         <Compile Include="StableSorting.fs" />
-        <Compile Include="GenerationContext.fs" />
-        <Compile Include="Generator.fs" />
+        <Compile Include="ParserDefinition.fs" />
+        <Compile Include="CodeGen\CodeGenerator.fs" />
         <Compile Include="Program.fs" />
     </ItemGroup>
 

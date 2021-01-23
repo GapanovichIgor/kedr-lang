@@ -1,3 +1,0 @@
-S -> EXPR
-EXPR -> id | strlit | numlit
-EXPR -> pareno EXPR parenc

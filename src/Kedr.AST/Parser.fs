@@ -3,14 +3,6 @@ module Kedr.AST.Parser
 open Kedr.Tokenization
 open ParserImpl
 
-type Identity = string
-
-type Expr =
-    | InParens of Expr
-    | IdRef of Identity
-    | NumLit of integral : uint32 * fractional : uint32 option
-    | StrLit of string
-
 let private recognize token =
     match token with
     | QuotedString content -> T_strlit content
