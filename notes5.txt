@@ -1,0 +1,85 @@
+module List =
+	proposition NotEmpty <a> (l : List a)
+
+	let notEmpty <a> (list : List a) : Maybe (Unit => NotEmpty list) =
+		match list with
+		| [] -> missing
+		| _ ->
+			holds (NotEmpty list)
+			present
+
+	let head <a> (list : List a) <NotEmpty list> : a =
+		match list with
+		| x :: _ -> x
+		| _ -> failwith "..."
+
+let test () =
+	let l = [ 1 ]
+
+	match notEmpty l with
+	| present () -> l |> List.head // OK
+	| missing -> l |> List.head // error: missig evidence for (NotEmpty l)
+
+	if notEmpty l then
+		l |> List.head // OK
+	else
+		l |> List.head // error
+
+
+if <expr : Bool> then <bodyT> [ else <bodyF> ]
+if <expr : Maybe (Unit => p)> then <bodyT> [ else <bodyF> ]
+
+
+module Maybe =
+	proposition IsPresent <a> (m : Maybe a)
+
+
+module List =
+	let whereHolds <a> <p> (test : a -> Unit => p) (list : List a) : List (x : a => p x) =
+		match list with
+		| [] -> [] // [] : List (x : a => p x)
+		| x :: xs ->
+			if test x
+			then x :: (whereHolds xs)
+			else whereHolds xs
+
+a -> Unit => p
+a -> !(p)
+
+-------
+Volatile
+// a function is volatile if its return value is dependent on an application of a volatile function on any flow path
+// a function can be marked volatile even if above is not true
+// no facts can be established for an expression that involves calling a volatile function
+// a bound value by itself can't be volatile
+
+let mkList () ~> List Nat =	...
+
+match mkList () .> isNotEmpty with
+| present () ->
+	mkList () .> head // error: no proof for NotEmpty (mkList ()), the proof for the other application can't be used
+...
+
+let l = mkList ()
+match l .> isNotEmpty with
+| present () ->
+	l .> head // ok
+	// 
+
+
+module Ref =
+	type Ref a
+
+	val set : <a> -> a -> Ref a -> Unit
+	val get : <a> -> Ref a ~> a
+
+module Console =
+	val readLine : Unit ~> String
+
+let foo (x : Nat) : Nat =
+	let str = Console.readLine () // ~ String
+	match str with
+	| Nat.toStr y? -> // y : ~ Nat
+		x + y
+	| _ ->
+		x

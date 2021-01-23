@@ -1,0 +1,43 @@
+
+namespace MyNamespace
+module MyData =
+	// must have the same name as module
+	// namespace of the type is meged into namespace of the module
+	// MyNamespace.myData
+	// 
+	:: primary
+	type MyData = myData (x : Int)
+
+	let myData ... // NO - namespace already contains that name (merged from type)
+
+	let foo (x : MyData) : Int = ...
+
+...
+let myData : MyData = ...
+let y = myData . foo // YES - foo is namespaced inside the type
+
+
+-------------
+
+type Functor T = { // Type -> Type ???
+	map : <A; B> -> (f : A -> B) -> (ta : T A) -> T B
+	}
+
+type Applicative T = {
+	functor : Functor T
+	pure : <A> A -> T A
+	apply : <A; B> -> T (A -> B) -> T A -> T B
+	}
+
+module Applicative =
+	let map <T; A; B> (f : A -> B) (ta : T A) (a : Applicative T) : T B = a . functor . map f
+
+type Monad t = {
+	applicative : Applicative t
+	bind : <a> <b> -> (a -> t b) -> t a -> t b
+	}
+
+module Monad =
+	let map <M; A; B> (f : A -> B) (ma : M A) (m : Monad M) : M B = m.applicative.functor .> map f ma
+	let apply <M; A; B> (f : M (A -> B)) (ma : M A) (m : Monad M) : M B = m.applicative .> apply f ma
+	let pure <M; A> (x : A) (m : Monad M) : M A = m.applicative .> pure x

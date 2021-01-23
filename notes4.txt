@@ -1,0 +1,67 @@
+1 syntax for implicit params? +
+2 syntax for passing args by name? +
+3 records
+	3.1 always anonymous + "newtype"
+		3.1.1 newtype with ctor
+			3.1.1.1 record in sum ctor ugly
+		3.1.2 newtype without ctor
+			3.1.2.1 syntax?
+	3.2 anonymous and named
+		3.2.1 syntax differentiation?
+	3.3 row polymorphism?
+4 syntax for do notation
+-----------------------------------------
+
+1
+---
+let foo <F, A> *(f : Functor F) (fa : F A) : F String = ...
+
+
+2
+---
+foo <F := List>
+
+foo (f := List.functor)
+
+
+3
+---
+3.1 no
+
+3.2
+
+type NamedRec = {
+	i : Int
+	b : Bool
+	}
+
+let named = { i = 1; b = true } // when inferred to be of type NamedRec
+let named : NamedRec = { i = 1; b = true }
+let named = { NamedRec of i = 1; b = true } // type specified
+
+let anon = { i = 1; b = true } // when inferred to be anonymous
+let anon : { i : Int; b : Bool } = { i = 1; b = true }
+let anon = { * of i = 1; b = true } // type specified
+
+let named = { named with i = 10 }
+let named = { NamedRec of anon }
+let named = { NamedRec of anon with i = 10 }
+
+let anon = { * from named }
+let anon = { * from named with z = "hello" }
+
+// maybe? unions
+let anoni = { i = 1 }
+let anonb = { b = true }
+let named = { NamedRec from anoni and anonb }
+
+// maybe? row polymorphism
+let foo (x : { name : string; ... }) =
+	x.name
+
+4
+---
+
+let x = async {|
+	1
+|}

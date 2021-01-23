@@ -1,0 +1,116 @@
+type ToStr t = t -> String
+
+let public implicit intToStr : ToStr <Int> = \i -> i .> ToString
+
+let public implicit listToStr <elem> <elemToStr : ToStr elem> : ToStr (List elem) =	\l ->
+	l
+	.> map elemToStr
+	|> \strs -> String.Concat (", ", strs)
+	|> fmt "[{0}]"
+
+
+invertBy fromStr
+let public toStr <t> <toStr : ToStr> (x : t) : String = ...
+
+invertBy toStr
+let public fromStr <t> <fromStr : FromStr> (s : String) : t = ...
+
+----------------------------
+
+if optX is Some x do
+	// x is bound here
+
+
+----------------------------
+
+// lowercase value constructor names
+type Maybe a =
+	| present a
+	| nothing
+
+----------------------------
+
+type DbScalar db mem = {
+	serialize : mem -> db
+	deserialize : db -> mem
+	}
+
+type DbRelation a = {
+	name : String
+	serialize : a -> List (String, DbValue)
+	deserialize : Map String DbValue -> a
+	}
+
+---
+
+let implicit intScalar : DbScalar DbInt Int = {
+	serialize = ...
+	deserialize = ...
+	}
+
+---
+
+let query <a> <dbRel : DbRelation a> () : Query a = ...
+
+---
+
+type MyEntity = {
+	code : Int
+	name : String
+	archived : Bool
+	}
+
+
+/*
+module Db MyEntity =
+	type ^Db MyEntity = {
+		code : DbInt
+		name : DbString
+		archived : DbBool
+		}
+*/
+let q : (Db MyEntity).T = query <MyEntity> ()
+
+let implicit myEntityRelation : DbRelation MyEntity = DbRelationProvider.auto<MyEntity> ()
+
+---
+
+let q =
+	query <MyEntity> ()
+	|> 
+
+---------------------
+
+module TrickyCtor =
+	type TrickyCtor =
+		:: private
+		| trickyCtor Int
+
+	:: public
+	:: invertibleBy getNumber
+	let trickyCtor i =
+		if i < 0 then raise "must be positive"
+		TrickyCtor.trickyCtor i
+
+	:: public
+	let getNumber t =
+		let (TrickyCtor.trickyCtor i) = t
+		i
+
+-------------------
+
+module Something =
+	:: abstract
+	type Something
+
+	:: invertibleBy tryAs
+	val toSomething : <A> A -> Something
+
+	:: invertibleBy toSomething
+	val tryAs : <A> Something -> Maybe A
+
+let x : Something = toSomething 1
+
+match x with
+| toSomething <Int> i? -> // i : Int
+| toSomething <Bool> b? -> // b : Bool

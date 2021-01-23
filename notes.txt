@@ -1,74 +1,3 @@
-
-----
-function inverse relation - generalization of active patterns
-might not work with overloading/type classes
-
-val strOf : 'a -> String
-let strOf x = x.ToString()
-
-val intOfStr : String -> Maybe Int
-let intOfStr s =
-	match Int32.TryParse s with
-	| true, i -> Just i
-	| _ -> Nothing
-
-let intOfStr <-> strOf <Int>
-
-...
-
-match str with
-| strOf i -> i	// can be used in pattern matching because inverse function returns Maybe
-| _ -> 0
-
-let (intOfStr s) = i	// can be used in deconstruction because inverse function definitely returns value
-
-----
-function overloading
-allowed as long as fully qualified name is unique
-
-module A =
-	val foo : Int32 -> Unit
-	val foo : Float32 -> Unit // NO - same namespace
-
-module B =
-	val foo : Float32 -> Unit // YES - different namespace
-
-...
-
-import A
-import B
-
-foo 1
-foo 1.0
-
-let renamedFoo = A.foo
-
-----
-function syntax
-
-val foo : Int -> Int
-let foo x = x
-// or
-let foo = \x -> x
-
-val ptrn : Int -> String
-let ptrn = match with		// allow inspecting arguments for point free functions somehow?
-	| 0 -> "0"
-	| 1 -> "1"
-	| _ -> "many"
-
-----
-sum types
-
-type T = T
-
-type T2 =
-	| T2Of Int
-
-type T3 =
-	| T3OfInt Int
-	| T3OfString String
-
 ----
 records
 
@@ -215,3 +144,65 @@ type args
 val foo : 'a -> 'b
 
 val fooHigher : (''a -> ''b) -> 'a -> 'b
+
+
+----
+Overloaded literals and list constructors
+let myNum : MyNumber = 1 // ?
+let myCollection : MyCollection = 1 :: [] // ?
+
+
+----
+implicits can have implicit parameters
+
+type Nextable T = T -> T
+
+type Table T K V = {
+	get : K -> T K V -> V
+	set : K -> V -> T K V -> T K V
+	}
+
+type Iterable I A = I A -> Maybe (A, I A)
+
+let iterableTable <T, K, V> *(table : Table T K V) *(next : Nextable K) : Iterable T V =
+	\table ->
+		// ok, bad example, but you get the idea
+----
+
+fact AreSame &a &b
+
+module Maybe =
+	type ^Maybe =
+		| present a // pattern match emits: IsPresent <original_value>, AreSame (<original_value> .> deref) <extracted_value>
+		| nothing
+
+	fact IsPresent &a
+
+	let isPresent &x : Maybe (Unit => IsPresent &x) =
+		match x with
+		| present x -> present ()
+		| nothing -> nothing
+
+	let deref <a> (&x : Maybe a) <_ : IsPressent &x> : a = ...
+
+type Recur = { next : Maybe Recur }
+
+let r = { next = present { next = present { next = nothing }}}
+
+let list : List Recur = ...
+
+let atLeast3Deep : List (r : Recur => IsPresent (r .> next), IsPresent (r .> next .> deref .> next), ...) =
+	list
+	.> map (\r ->
+		match r .> next with
+		| nothing -> nothing
+		| present r2 -> // IsPresent (r .> next), AreSame (r .> next .> deref) r2 | emitted by successful match with "present"
+			match r2 .> next with
+			| nothing -> nothing
+			| present r3 -> present r // + IsPresent (r2 .> next), AreSame (r2 .> next .> deref) r3, IsPresent (r .> next .> deref .> next), AreSame (r .> next .> deref .> next .> deref) r3
+		) // List (Maybe (r : Recur => IsPresent (r .> next), IsPresent (r .> next .> deref .> next), ...))
+	.> wherePresent id
+
+let next r = r .> next .> deref // r : Recur => IsPresent (r .> next)
+for r in atLeast3Deep do // r : Recur => IsPresent (r .> next), IsPresent (r .> next .> deref .> next), ...
+	let r3 = r |> next |> next
