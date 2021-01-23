@@ -10,6 +10,7 @@ type internal Configuration<'symbol when 'symbol : comparison> =
         cursorOffset : int
         lookahead : 'symbol Set
     }
+
     override this.ToString() =
         let str = this.production.ToString()
 
@@ -27,3 +28,6 @@ type internal Configuration<'symbol when 'symbol : comparison> =
             |> String.concat " "
 
         sprintf "%s [%s]" mainPart lookahead
+
+module internal Configuration =
+    let isFinal cfg = cfg.cursorOffset = cfg.production.into.Length

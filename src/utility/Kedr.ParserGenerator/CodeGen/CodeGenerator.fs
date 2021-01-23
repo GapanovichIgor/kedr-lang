@@ -172,7 +172,7 @@ let private writeParseFunction (grammar : Grammar<_>) (automaton : LALR.Automato
                 fprintfn writer "            | %s _ -> failwith \"TODO reject\"" terminalName
 
         fprintfn writer "            ()"
-    fprintfn writer "        | _ -> failwith \"Parser is in an invalid state. This is a bug in parser generator.\""
+    fprintfn writer "        | _ -> failwith \"Parser is in an invalid state. This is a bug in the parser generator.\""
 
     fprintfn writer "    failwith \"TODO\""
 

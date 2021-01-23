@@ -45,12 +45,17 @@ module internal ParsingTable =
         let action =
             seq {
                 for state in automaton.states do
-                    let finalConfigurations =
-                        state.configurations |> Set.filter (fun cfg -> cfg.production.into.Length = cfg.cursorOffset)
+                    let finalConfigurations = state.configurations |> Set.filter Configuration.isFinal
 
                     for cfg in finalConfigurations do
                         for lookahead in cfg.lookahead do
-                            yield ({ state = state; lookaheadSymbol = lookahead }, Reduce cfg.production)
+                            let key =
+                                { state = state
+                                  lookaheadSymbol = lookahead }
+
+                            let action = Reduce cfg.production
+
+                            yield (key, action)
             }
             |> DefaultingMap.ofSeq Shift
 
