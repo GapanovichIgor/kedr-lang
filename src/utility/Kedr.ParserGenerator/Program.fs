@@ -22,7 +22,7 @@ let main argv =
 
     match parserDefinition with
     | Error error ->
-        error |> Seq.iter Console.WriteLine
+        error |> Console.WriteLine
         1
     | Ok parserDefinition ->
         let grammar = Grammar.fromProductions parserDefinition.productions
