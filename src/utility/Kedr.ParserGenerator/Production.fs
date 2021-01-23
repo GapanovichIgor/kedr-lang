@@ -14,3 +14,10 @@ type Production<'symbol> =
             |> String.concat " "
 
         sprintf "%s 🠚 %s" (this.from.ToString()) result
+
+module Production =
+    let getSymbols prod =
+        seq {
+            yield prod.from
+            yield! prod.into
+        }
