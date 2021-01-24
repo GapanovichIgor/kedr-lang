@@ -33,13 +33,13 @@ type internal TableKey<'a when 'a : comparison> = {
 }
 
 type internal ParsingTable<'a when 'a : comparison> = {
-    goto : DefaultingMap<TableKey<'a>, State<'a>>
+    goto : Map<TableKey<'a>, State<'a>>
     action : DefaultingMap<TableKey<'a>, Action<'a>>
 }
 
 module internal ParsingTable =
     let create (automaton : Automaton<_>) =
-        let action =
+        let action : DefaultingMap<TableKey<'s>, Action<'s>> =
             seq {
                 for state in automaton.states do
                     let finalConfigurations = state.configurations |> Set.filter Configuration.isFinal
@@ -61,11 +61,24 @@ module internal ParsingTable =
 
                     for symbol in symbolsWithTransitionFromState do
                         yield ({ state = state; symbol = symbol }, Shift)
-
-            }
-            |> DefaultingMap.ofSeq Reject
+            } |> DefaultingMap.ofSeq Reject
 
         let goto =
-            failwith ""
+            seq {
+                for state in automaton.states do
+                    let nonFinalConfigurations = state.configurations |> Set.filter (not << Configuration.isFinal)
+
+                    for cfg in nonFinalConfigurations do
+                        match Configuration.getSymbolAfterCursor cfg with
+                        | None -> ()
+                        | Some symbol ->
+                            if automaton.grammar.nonTerminals.Contains(symbol) then
+                                let transitionOnSymbol =
+                                    automaton.transitions
+                                    |> Seq.filter (fun tr -> tr.sourceState = state && tr.symbol = symbol)
+                                    |> Seq.exactlyOne
+
+                                yield ({ state = state; symbol = symbol }, transitionOnSymbol.destinationState)
+            } |> Map.ofSeq
 
         { action = action; goto = goto }
