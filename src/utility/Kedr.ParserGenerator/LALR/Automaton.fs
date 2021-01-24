@@ -152,7 +152,12 @@ module internal Automaton =
 
                 let endConfig = { config with cursorOffset = config.production.into.Length }
 
-                lookaheadMap <- lookaheadMap |> Map.add (endState, endConfig) lookahead
+                let key = (endState, endConfig)
+
+                lookaheadMap <-
+                    match lookaheadMap |> Map.tryFind key with
+                    | Some existingLookahead -> lookaheadMap |> Map.add key (existingLookahead + lookahead)
+                    | None -> lookaheadMap |> Map.add key lookahead
 
         lookaheadMap
 

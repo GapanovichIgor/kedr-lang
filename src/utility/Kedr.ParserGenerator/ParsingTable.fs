@@ -27,19 +27,14 @@ type internal Action<'a> =
     | Accept
     | Reject
 
-type internal GotoKey<'a when 'a : comparison> = {
+type internal TableKey<'a when 'a : comparison> = {
     state : State<'a>
-    observedSymbol : 'a
-}
-
-type internal ActionKey<'a when 'a : comparison> = {
-    state : State<'a>
-    lookaheadSymbol : 'a
+    symbol : 'a
 }
 
 type internal ParsingTable<'a when 'a : comparison> = {
-    goto : DefaultingMap<GotoKey<'a>, State<'a>>
-    action : DefaultingMap<ActionKey<'a>, Action<'a>>
+    goto : DefaultingMap<TableKey<'a>, State<'a>>
+    action : DefaultingMap<TableKey<'a>, Action<'a>>
 }
 
 module internal ParsingTable =
@@ -51,25 +46,21 @@ module internal ParsingTable =
 
                     for cfg in finalConfigurations do
                         for lookahead in cfg.lookahead do
-                            let key =
-                                { state = state
-                                  lookaheadSymbol = lookahead }
-
                             let action =
                                 if automaton.grammar.startingSymbols.Contains(cfg.production.from)
                                 then Accept
                                 else Reduce cfg.production
 
-                            yield (key, action)
+                            yield ({ state = state; symbol = lookahead }, action)
 
-                    let nonFinalConfigurations = state.configurations - finalConfigurations
-                    for cfg in nonFinalConfigurations do
-                        for lookahead in cfg.lookahead do
-                            if Some lookahead = Configuration.getSymbolAfterCursor cfg then
-                                let key =
-                                    { state = state
-                                      lookaheadSymbol = lookahead }
-                                yield (key, Shift)
+                    let symbolsWithTransitionFromState =
+                        automaton.transitions
+                        |> Seq.filter (fun tr -> tr.sourceState = state)
+                        |> Seq.map (fun tr -> tr.symbol)
+                        |> Seq.filter (automaton.grammar.terminals.Contains)
+
+                    for symbol in symbolsWithTransitionFromState do
+                        yield ({ state = state; symbol = symbol }, Shift)
 
             }
             |> DefaultingMap.ofSeq Reject
