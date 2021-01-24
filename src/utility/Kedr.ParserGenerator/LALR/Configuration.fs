@@ -31,3 +31,8 @@ type internal Configuration<'symbol when 'symbol : comparison> =
 
 module internal Configuration =
     let isFinal cfg = cfg.cursorOffset = cfg.production.into.Length
+
+    let getSymbolAfterCursor cfg =
+        if cfg.cursorOffset >= cfg.production.into.Length
+        then None
+        else Some (cfg.production.into.[cfg.cursorOffset])

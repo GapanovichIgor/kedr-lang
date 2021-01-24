@@ -24,6 +24,8 @@ module internal DefaultingMap =
 type internal Action<'a> =
     | Shift
     | Reduce of Production<'a>
+    | Accept
+    | Reject
 
 type internal GotoKey<'a when 'a : comparison> = {
     state : State<'a>
@@ -53,11 +55,24 @@ module internal ParsingTable =
                                 { state = state
                                   lookaheadSymbol = lookahead }
 
-                            let action = Reduce cfg.production
+                            let action =
+                                if automaton.grammar.startingSymbols.Contains(cfg.production.from)
+                                then Accept
+                                else Reduce cfg.production
 
                             yield (key, action)
+
+                    let nonFinalConfigurations = state.configurations - finalConfigurations
+                    for cfg in nonFinalConfigurations do
+                        for lookahead in cfg.lookahead do
+                            if Some lookahead = Configuration.getSymbolAfterCursor cfg then
+                                let key =
+                                    { state = state
+                                      lookaheadSymbol = lookahead }
+                                yield (key, Shift)
+
             }
-            |> DefaultingMap.ofSeq Shift
+            |> DefaultingMap.ofSeq Reject
 
         let goto =
             failwith ""
