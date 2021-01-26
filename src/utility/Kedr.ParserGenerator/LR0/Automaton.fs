@@ -66,7 +66,7 @@ module internal Automaton =
     let create (grammar : Grammar<_>) =
         let initialState = // closed start configurations of S
             grammar.productions
-            |> Seq.filter (fun prod -> grammar.startingSymbols |> Set.contains prod.from)
+            |> Seq.filter (fun prod -> prod.from = grammar.startingSymbol)
             |> Seq.collect (fun prod -> seq {
                 let state = Configuration.createStart prod
                 yield state

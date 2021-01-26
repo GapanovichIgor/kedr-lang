@@ -6,7 +6,7 @@ type Grammar<'symbol when 'symbol : comparison> =
         symbols : 'symbol Set
         terminals : 'symbol Set
         nonTerminals : 'symbol Set
-        startingSymbols : 'symbol Set
+        startingSymbol : 'symbol
     }
 
 module Grammar =
@@ -16,12 +16,16 @@ module Grammar =
         let terminals = producedSymbols - nonTerminals
         let startingSymbols = nonTerminals - producedSymbols
 
-        if startingSymbols.IsEmpty then failwith "Invalid grammar: no starting symbols"
+        let startingSymbol =
+            match startingSymbols |> List.ofSeq with
+            | [] -> failwith "Invalid grammar: no starting symbols"
+            | [s] -> s
+            | _ -> failwith "Ivalid grammar: more than one potential starting symbol"
 
         {
             productions = productions
             symbols = terminals + nonTerminals
             terminals = terminals
             nonTerminals = nonTerminals
-            startingSymbols = startingSymbols
+            startingSymbol = startingSymbol
         }

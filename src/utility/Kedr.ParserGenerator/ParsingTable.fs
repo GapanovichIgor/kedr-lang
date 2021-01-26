@@ -47,7 +47,7 @@ module internal ParsingTable =
                     for cfg in finalConfigurations do
                         for lookahead in cfg.lookahead do
                             let action =
-                                if automaton.grammar.startingSymbols.Contains(cfg.production.from)
+                                if cfg.production.from = automaton.grammar.startingSymbol
                                 then Accept
                                 else Reduce cfg.production
 

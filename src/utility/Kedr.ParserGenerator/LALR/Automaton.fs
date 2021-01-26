@@ -101,8 +101,7 @@ module internal Automaton =
 
         let followSets = createEmptyMap ()
 
-        for symbol in grammar.startingSymbols do
-            followSets.[symbol].Add(eof)
+        followSets.[grammar.startingSymbol].Add(eof)
 
         for production in grammar.productions do
             let lastOfInto = production.into |> List.last
