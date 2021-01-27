@@ -15,7 +15,7 @@ open Kedr.Tokenization.Tests.Data.QuotedString
 open Kedr.Tokenization.Tests.Data.NewLine
 open Kedr.Tokenization.Tests.Data.AnyToken
 
-type private TK = Token
+type private T = Token
 
 let private parse source =
     let parseResult = Tokenizer.parseString source
@@ -24,82 +24,82 @@ let private parse source =
 let [<Property>] ``number is parsed as such``
     (Number''(text, i, f)) =
 
-    parse text == [ TK.Number(i, f) ]
+    parse text == [ T.Number(i, f) ]
 
 let [<Property>] ``quoted string is parsed as such``
     (QuotedString''(text, content)) =
 
-    parse text == [ TK.QuotedString content ]
+    parse text == [ T.QuotedString content ]
 
 let [<Property>] ``identifier is parsed as such``
     (Identifier' i) =
 
-    parse i == [ TK.Identifier i ]
+    parse i == [ T.Identifier i ]
 
 let [<PropertyOnce>] ``let is parsed as such``
     () =
 
-    parse "let" == [ TK.Let ]
+    parse "let" == [ T.Let ]
 
 let [<PropertyOnce>] ``type is parsed as such``
     () =
 
-    parse "type" == [ TK.Type ]
+    parse "type" == [ T.Type ]
 
 let [<PropertyOnce>] ``plus is parsed as such``
     () =
 
-    parse "+" == [ TK.Plus ]
+    parse "+" == [ T.Plus ]
 
 let [<PropertyOnce>] ``minus is parsed as such``
     () =
 
-    parse "-" == [ TK.Minus ]
+    parse "-" == [ T.Minus ]
 
 let [<PropertyOnce>] ``asterisk is parsed as such``
     () =
 
-    parse "*" == [ TK.Asterisk ]
+    parse "*" == [ T.Asterisk ]
 
 let [<PropertyOnce>] ``slash is parsed as such``
     () =
 
-    parse "/" == [ TK.Slash ]
+    parse "/" == [ T.Slash ]
 
 let [<PropertyOnce>] ``equals is parsed as such``
     () =
 
-    parse "=" == [ TK.Equals ]
+    parse "=" == [ T.Equals ]
 
 let [<PropertyOnce>] ``not equals is parsed as such``
     () =
 
-    parse "/=" == [ TK.NotEquals ]
+    parse "/=" == [ T.NotEquals ]
 
 let [<PropertyOnce>] ``opening parenthesis is parsed as such``
     () =
 
-    parse "(" == [ TK.ParenOpen ]
+    parse "(" == [ T.ParenOpen ]
 
 let [<PropertyOnce>] ``closing parenthesis is parsed as such``
     () =
 
-    parse ")" == [ TK.ParenClose ]
+    parse ")" == [ T.ParenClose ]
 
 let [<PropertyOnce>] ``square bracket open is parsed as such``
     () =
 
-    parse "[" == [ TK.SquareBracketOpen ]
+    parse "[" == [ T.SquareBracketOpen ]
 
 let [<PropertyOnce>] ``square bracket close is parsed as such``
     () =
 
-    parse "]" == [ TK.SquareBracketClose ]
+    parse "]" == [ T.SquareBracketClose ]
 
 let [<PropertyOnce>] ``hard break is parsed as such``
     () =
 
-    parse ";" == [ TK.HardBreak ]
+    parse ";" == [ T.HardBreak ]
 
 let [<Property>] ``whitespace is not a token``
     (Whitespace' ws) =
@@ -133,7 +133,7 @@ let [<Property>] ``parsing token concatenation = parsing one by one``
 let [<PropertyOnce>] ``invalid token is parsed as such``
     () =
 
-    parse "@" == [ TK.InvalidToken "@" ]
+    parse "@" == [ T.InvalidToken "@" ]
 
 let [<Property>] ``indentation increase creates a block``
     (Indentation' ind)
@@ -142,7 +142,7 @@ let [<Property>] ``indentation increase creates a block``
     (AnyToken' tok2) =
 
     parse (ind + tok1 + nl + ind + ind + tok2) ==
-        (parse tok1) @ [ TK.BlockOpen ] @ (parse tok2) @ [ TK.BlockClose ]
+        (parse tok1) @ [ T.BlockOpen ] @ (parse tok2) @ [ T.BlockClose ]
 
 let [<Property>] ``no indentation is level 0 indentation``
     (Indentation' ind)
@@ -169,7 +169,7 @@ let [<Property>] ``number of block opens is always the same as the number of blo
 
     let count tok = tokens |> Seq.filter (fun tok' -> tok' = tok) |> Seq.length
 
-    count TK.BlockOpen == count TK.BlockClose
+    count T.BlockOpen == count T.BlockClose
 
 let [<Property>] ``keeping indentation level produces soft break``
     (Indentation' ind)
@@ -177,7 +177,7 @@ let [<Property>] ``keeping indentation level produces soft break``
     (AnyToken' tok2)
     (NewLine' nl) =
 
-    parse (ind + tok1 + nl + ind + tok2) == (parse tok1) @ [ TK.SoftBreak ] @ (parse tok2)
+    parse (ind + tok1 + nl + ind + tok2) == (parse tok1) @ [ T.SoftBreak ] @ (parse tok2)
 
 let [<Property>] ``empty or whitespace-only line does not affect block formation``
     (Indentation' ind1)
@@ -187,22 +187,22 @@ let [<Property>] ``empty or whitespace-only line does not affect block formation
     (AnyToken' tok2)
     (NewLine' nl) =
 
-    let expectation = (parse tok1) @ [ TK.SoftBreak ] @ (parse tok2)
+    let expectation = (parse tok1) @ [ T.SoftBreak ] @ (parse tok2)
 
     (parse (ind1 + tok1 + nl + ind2 + ws + nl + ind1 + tok2) == expectation) .&.
-    (parse (ind1 + tok1 + nl + ind2 (**) + nl + ind1 + tok2) == expectation) .&.
-    (parse (ind1 + tok1 + nl (*       *) + nl + ind1 + tok2) == expectation)
+    (parse (ind1 + tok1 + nl + ind2      + nl + ind1 + tok2) == expectation) .&.
+    (parse (ind1 + tok1 + nl             + nl + ind1 + tok2) == expectation)
 
 let [<PropertyOnce>] ``arbitrary example test``
     () =
 
     parse "let add x y = x + y;" ==
-        [ TK.Let
-          TK.Identifier "add"
-          TK.Identifier "x"
-          TK.Identifier "y"
-          TK.Equals
-          TK.Identifier "x"
-          TK.Plus
-          TK.Identifier "y"
-          TK.HardBreak ]
+        [ T.Let
+          T.Identifier "add"
+          T.Identifier "x"
+          T.Identifier "y"
+          T.Equals
+          T.Identifier "x"
+          T.Plus
+          T.Identifier "y"
+          T.HardBreak ]
