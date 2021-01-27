@@ -7,4 +7,3 @@ type Expr =
     | IdRef of Identity
     | NumLit of integral : uint32 * fractional : uint32 option
     | StrLit of string
-

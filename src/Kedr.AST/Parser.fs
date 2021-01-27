@@ -3,13 +3,14 @@ module Kedr.AST.Parser
 open Kedr.Tokenization
 open ParserImpl
 
-let private recognize token =
+let private toTerminal token =
     match token with
     | QuotedString content -> T_strlit content
     | Number (i, f) -> T_numlit (i, f)
     | Identifier id -> T_id id
     | ParenOpen -> T_pareno ()
     | ParenClose -> T_parenc ()
+    | _ -> failwith "TODO"
 
 let private reducer = {
     EXPR_pareno_EXPR_parenc = fun (_, expr, _) -> expr
@@ -20,4 +21,5 @@ let private reducer = {
 }
 
 let parse (tokens : seq<Token>) =
-    parse recognize reducer tokens
+    let input = tokens |> Seq.map toTerminal
+    parse reducer input
