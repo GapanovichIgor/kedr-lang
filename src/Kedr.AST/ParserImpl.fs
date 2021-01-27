@@ -22,149 +22,240 @@ type Reducer = {
 
 let parse (reducer : Reducer) (input : Terminal seq) : Result<Expr, string> =
     use inputEnumerator = input.GetEnumerator()
-    let mutable state = 1
-    let eof = Unchecked.defaultof<Terminal>
     let lhsStack = System.Collections.Generic.Stack<obj>(50)
     let stateStack = System.Collections.Generic.Stack<int>(50)
-    let mutable lookahead = Unchecked.defaultof<Terminal>
     let mutable result = Unchecked.defaultof<Expr>
     let mutable accepted = false
-    let mutable keepGoing = true
 
-    lookahead <-
+    stateStack.Push(1)
+
+    let mutable (lookahead, lookaheadIsEof) =
         if inputEnumerator.MoveNext()
-        then inputEnumerator.Current
-        else eof
+        then (inputEnumerator.Current, false)
+        else (Unchecked.defaultof<Terminal>, true)
 
+    let mutable keepGoing = true
     while keepGoing do
-        match state with
+        match stateStack.Peek() with
         | 0 ->
             match lookahead with
             | T_id x ->
                 // shift
                 lhsStack.Push(x)
-                lookahead <-
-                    if inputEnumerator.MoveNext()
-                    then inputEnumerator.Current
-                    else eof
-                state <- 2
+                if inputEnumerator.MoveNext()
+                then lookahead <- inputEnumerator.Current
+                else lookaheadIsEof <- true
+                stateStack.Push(2)
             | T_numlit x ->
                 // shift
                 lhsStack.Push(x)
-                lookahead <-
-                    if inputEnumerator.MoveNext()
-                    then inputEnumerator.Current
-                    else eof
-                state <- 3
+                if inputEnumerator.MoveNext()
+                then lookahead <- inputEnumerator.Current
+                else lookaheadIsEof <- true
+                stateStack.Push(3)
             | T_pareno x ->
                 // shift
                 lhsStack.Push(x)
-                lookahead <-
-                    if inputEnumerator.MoveNext()
-                    then inputEnumerator.Current
-                    else eof
-                state <- 0
+                if inputEnumerator.MoveNext()
+                then lookahead <- inputEnumerator.Current
+                else lookaheadIsEof <- true
+                stateStack.Push(0)
             | T_strlit x ->
                 // shift
                 lhsStack.Push(x)
-                lookahead <-
-                    if inputEnumerator.MoveNext()
-                    then inputEnumerator.Current
-                    else eof
-                state <- 6
+                if inputEnumerator.MoveNext()
+                then lookahead <- inputEnumerator.Current
+                else lookaheadIsEof <- true
+                stateStack.Push(6)
+            | _ ->
+                // error
+                keepGoing <- false
         | 1 ->
             match lookahead with
             | T_id x ->
                 // shift
                 lhsStack.Push(x)
-                lookahead <-
-                    if inputEnumerator.MoveNext()
-                    then inputEnumerator.Current
-                    else eof
-                state <- 2
+                if inputEnumerator.MoveNext()
+                then lookahead <- inputEnumerator.Current
+                else lookaheadIsEof <- true
+                stateStack.Push(2)
             | T_numlit x ->
                 // shift
                 lhsStack.Push(x)
-                lookahead <-
-                    if inputEnumerator.MoveNext()
-                    then inputEnumerator.Current
-                    else eof
-                state <- 3
+                if inputEnumerator.MoveNext()
+                then lookahead <- inputEnumerator.Current
+                else lookaheadIsEof <- true
+                stateStack.Push(3)
             | T_pareno x ->
                 // shift
                 lhsStack.Push(x)
-                lookahead <-
-                    if inputEnumerator.MoveNext()
-                    then inputEnumerator.Current
-                    else eof
-                state <- 0
+                if inputEnumerator.MoveNext()
+                then lookahead <- inputEnumerator.Current
+                else lookaheadIsEof <- true
+                stateStack.Push(0)
             | T_strlit x ->
                 // shift
                 lhsStack.Push(x)
-                lookahead <-
-                    if inputEnumerator.MoveNext()
-                    then inputEnumerator.Current
-                    else eof
-                state <- 6
+                if inputEnumerator.MoveNext()
+                then lookahead <- inputEnumerator.Current
+                else lookaheadIsEof <- true
+                stateStack.Push(6)
+            | _ ->
+                // error
+                keepGoing <- false
         | 2 ->
             match lookahead with
-            | t when t = eof ->
-                let arg1 = lhsStack.Pop()
+            | _ when lookaheadIsEof ->
+                // reduce
+                let arg1 = lhsStack.Pop() :?> string
+                stateStack.Pop() |> ignore
                 let reductionArgs = (arg1)
-                ()
-            | T_parenc x ->
-                let arg1 = lhsStack.Pop()
+                let reduced = reducer.EXPR_id reductionArgs
+                lhsStack.Push(reduced)
+                let nextState = 
+                    match stateStack.Peek() with
+                    | 0 -> 4
+                    | 1 -> 7
+                    | _ -> failwith "Parser is in an invalid state. This is a bug in the parser generator."
+                stateStack.Push(nextState)
+            | T_parenc _ ->
+                // reduce
+                let arg1 = lhsStack.Pop() :?> string
+                stateStack.Pop() |> ignore
                 let reductionArgs = (arg1)
-                ()
+                let reduced = reducer.EXPR_id reductionArgs
+                lhsStack.Push(reduced)
+                let nextState = 
+                    match stateStack.Peek() with
+                    | 0 -> 4
+                    | 1 -> 7
+                    | _ -> failwith "Parser is in an invalid state. This is a bug in the parser generator."
+                stateStack.Push(nextState)
+            | _ ->
+                // error
+                keepGoing <- false
         | 3 ->
             match lookahead with
-            | t when t = eof ->
-                let arg1 = lhsStack.Pop()
+            | _ when lookaheadIsEof ->
+                // reduce
+                let arg1 = lhsStack.Pop() :?> uint32 * uint32 option
+                stateStack.Pop() |> ignore
                 let reductionArgs = (arg1)
-                ()
-            | T_parenc x ->
-                let arg1 = lhsStack.Pop()
+                let reduced = reducer.EXPR_numlit reductionArgs
+                lhsStack.Push(reduced)
+                let nextState = 
+                    match stateStack.Peek() with
+                    | 0 -> 4
+                    | 1 -> 7
+                    | _ -> failwith "Parser is in an invalid state. This is a bug in the parser generator."
+                stateStack.Push(nextState)
+            | T_parenc _ ->
+                // reduce
+                let arg1 = lhsStack.Pop() :?> uint32 * uint32 option
+                stateStack.Pop() |> ignore
                 let reductionArgs = (arg1)
-                ()
+                let reduced = reducer.EXPR_numlit reductionArgs
+                lhsStack.Push(reduced)
+                let nextState = 
+                    match stateStack.Peek() with
+                    | 0 -> 4
+                    | 1 -> 7
+                    | _ -> failwith "Parser is in an invalid state. This is a bug in the parser generator."
+                stateStack.Push(nextState)
+            | _ ->
+                // error
+                keepGoing <- false
         | 4 ->
             match lookahead with
             | T_parenc x ->
                 // shift
                 lhsStack.Push(x)
-                lookahead <-
-                    if inputEnumerator.MoveNext()
-                    then inputEnumerator.Current
-                    else eof
-                state <- 5
+                if inputEnumerator.MoveNext()
+                then lookahead <- inputEnumerator.Current
+                else lookaheadIsEof <- true
+                stateStack.Push(5)
+            | _ ->
+                // error
+                keepGoing <- false
         | 5 ->
             match lookahead with
-            | t when t = eof ->
-                let arg3 = lhsStack.Pop()
-                let arg2 = lhsStack.Pop()
-                let arg1 = lhsStack.Pop()
+            | _ when lookaheadIsEof ->
+                // reduce
+                let arg3 = lhsStack.Pop() :?> unit
+                stateStack.Pop() |> ignore
+                let arg2 = lhsStack.Pop() :?> Expr
+                stateStack.Pop() |> ignore
+                let arg1 = lhsStack.Pop() :?> unit
+                stateStack.Pop() |> ignore
                 let reductionArgs = (arg1, arg2, arg3)
-                ()
-            | T_parenc x ->
-                let arg3 = lhsStack.Pop()
-                let arg2 = lhsStack.Pop()
-                let arg1 = lhsStack.Pop()
+                let reduced = reducer.EXPR_pareno_EXPR_parenc reductionArgs
+                lhsStack.Push(reduced)
+                let nextState = 
+                    match stateStack.Peek() with
+                    | 0 -> 4
+                    | 1 -> 7
+                    | _ -> failwith "Parser is in an invalid state. This is a bug in the parser generator."
+                stateStack.Push(nextState)
+            | T_parenc _ ->
+                // reduce
+                let arg3 = lhsStack.Pop() :?> unit
+                stateStack.Pop() |> ignore
+                let arg2 = lhsStack.Pop() :?> Expr
+                stateStack.Pop() |> ignore
+                let arg1 = lhsStack.Pop() :?> unit
+                stateStack.Pop() |> ignore
                 let reductionArgs = (arg1, arg2, arg3)
-                ()
+                let reduced = reducer.EXPR_pareno_EXPR_parenc reductionArgs
+                lhsStack.Push(reduced)
+                let nextState = 
+                    match stateStack.Peek() with
+                    | 0 -> 4
+                    | 1 -> 7
+                    | _ -> failwith "Parser is in an invalid state. This is a bug in the parser generator."
+                stateStack.Push(nextState)
+            | _ ->
+                // error
+                keepGoing <- false
         | 6 ->
             match lookahead with
-            | t when t = eof ->
-                let arg1 = lhsStack.Pop()
+            | _ when lookaheadIsEof ->
+                // reduce
+                let arg1 = lhsStack.Pop() :?> string
+                stateStack.Pop() |> ignore
                 let reductionArgs = (arg1)
-                ()
-            | T_parenc x ->
-                let arg1 = lhsStack.Pop()
+                let reduced = reducer.EXPR_strlit reductionArgs
+                lhsStack.Push(reduced)
+                let nextState = 
+                    match stateStack.Peek() with
+                    | 0 -> 4
+                    | 1 -> 7
+                    | _ -> failwith "Parser is in an invalid state. This is a bug in the parser generator."
+                stateStack.Push(nextState)
+            | T_parenc _ ->
+                // reduce
+                let arg1 = lhsStack.Pop() :?> string
+                stateStack.Pop() |> ignore
                 let reductionArgs = (arg1)
-                ()
+                let reduced = reducer.EXPR_strlit reductionArgs
+                lhsStack.Push(reduced)
+                let nextState = 
+                    match stateStack.Peek() with
+                    | 0 -> 4
+                    | 1 -> 7
+                    | _ -> failwith "Parser is in an invalid state. This is a bug in the parser generator."
+                stateStack.Push(nextState)
+            | _ ->
+                // error
+                keepGoing <- false
         | 7 ->
             match lookahead with
-            | t when t = eof ->
+            | _ when lookaheadIsEof ->
                 // accept
+                result <- lhsStack.Pop() :?> Expr
                 accepted <- true
+                keepGoing <- false
+            | _ ->
+                // error
                 keepGoing <- false
         | _ -> failwith "Parser is in an invalid state. This is a bug in the parser generator."
 

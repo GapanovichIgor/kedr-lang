@@ -48,18 +48,20 @@ type CodeGenArgs<'s when 's : comparison> =
 
 let private symbolToTerminalCase args s = "T_" + (args.symbolToIdentifier s)
 
+let private productionToReducerFieldName args production =
+    let from = args.symbolToIdentifier production.from
+    let into =
+        production.into
+        |> Seq.map args.symbolToIdentifier
+        |> String.concat "_"
+
+    $"{from}_{into}"
+
 let private reducerType args =
     let reducerFields =
         args.parsingTable.grammar.productions
         |> Seq.map (fun p ->
-            let name =
-                let from = args.symbolToIdentifier p.from
-                let into =
-                    p.into
-                    |> Seq.map args.symbolToIdentifier
-                    |> String.concat "_"
-
-                $"{from}_{into}"
+            let name = productionToReducerFieldName args p
 
             let type_ =
                 let argType =
@@ -106,65 +108,104 @@ let private parseFunction args terminalCases = code {
     Line $"let parse (reducer : Reducer) (input : Terminal seq) : Result<{startingSymbolType}, string> ="
     Indented <| code {
         Line "use inputEnumerator = input.GetEnumerator()"
-        Line $"let mutable state = {stateNumbers.[startingState]}"
-        Line "let eof = Unchecked.defaultof<Terminal>"
         Line "let lhsStack = System.Collections.Generic.Stack<obj>(50)"
         Line "let stateStack = System.Collections.Generic.Stack<int>(50)"
-        Line "let mutable lookahead = Unchecked.defaultof<Terminal>"
         Line $"let mutable result = Unchecked.defaultof<{startingSymbolType}>"
         Line "let mutable accepted = false"
-        Line "let mutable keepGoing = true"
         blankLine
-        Line "lookahead <-"
+        Line $"stateStack.Push({stateNumbers.[startingState]})"
+        blankLine
+//        Line "let mutable lookaheadIsEof = false"
+        Line "let mutable (lookahead, lookaheadIsEof) ="
         Indented <| code {
             Line "if inputEnumerator.MoveNext()"
-            Line "then inputEnumerator.Current"
-            Line "else eof"
+            Line "then (inputEnumerator.Current, false)"
+            Line "else (Unchecked.defaultof<Terminal>, true)"
         }
         blankLine
+        Line "let mutable keepGoing = true"
         Line "while keepGoing do"
         Indented <| code {
-            Line "match state with"
-            code {
-                for (state, stateActions) in actionTable |> Map.toSeq do
-                    Line $"| {stateNumbers.[state]} ->"
-                    Indented <| code {
-                        Line "match lookahead with"
-                        for (symbol, action) in stateActions |> Map.toSeq do
-                            if symbol <> args.eofSymbol
-                            then Line $"| {symbolToTerminalCase args symbol} x ->"
-                            else Line $"| t when t = eof ->"
+            Line "match stateStack.Peek() with"
+            for (state, stateActions) in actionTable |> Map.toSeq do
+                Line $"| {stateNumbers.[state]} ->"
+                Indented <| code {
+                    Line "match lookahead with"
+
+                    let stateActions =
+                        stateActions
+                        |> Map.toSeq
+                        |> Seq.sortBy (fun (s, _) -> if s = args.eofSymbol then 0 else 1)
+
+                    for (symbol, action) in stateActions do
+                        match action with
+                        | Shift newState ->
+                            Line $"| {symbolToTerminalCase args symbol} x ->"
                             Indented <| code {
-                                match action with
-                                | Shift newState ->
-                                    comment "shift"
-                                    Line "lhsStack.Push(x)"
-                                    Line "lookahead <-"
-                                    Indented <| code {
-                                        Line "if inputEnumerator.MoveNext()"
-                                        Line "then inputEnumerator.Current"
-                                        Line "else eof"
-                                    }
-                                    Line $"state <- {stateNumbers.[newState]}"
-                                | Reduce production ->
-                                    let args =
-                                        [1..production.into.Length]
-                                        |> List.map (sprintf "arg%i")
-
-                                    for arg in args |> List.rev do
-                                        Line $"let {arg} = lhsStack.Pop()"
-
-                                    let argList = args |> String.concat ", "
-                                    Line $"let reductionArgs = ({argList})"
-                                    Line "()"
-                                | Accept ->
-                                    comment "accept"
-                                    Line "accepted <- true"
-                                    Line "keepGoing <- false"
+                                comment "shift"
+                                Line "lhsStack.Push(x)"
+                                Line "if inputEnumerator.MoveNext()"
+                                Line "then lookahead <- inputEnumerator.Current"
+                                Line "else lookaheadIsEof <- true"
+                                Line $"stateStack.Push({stateNumbers.[newState]})"
                             }
+                        | Reduce production ->
+                            let reductionArgs =
+                                production.into
+                                |> Seq.mapi (fun i s -> ($"arg{i + 1}", args.symbolTypes.[s]) )
+                                |> List.ofSeq
+
+                            let argList =
+                                reductionArgs
+                                |> Seq.map fst
+                                |> String.concat ", "
+
+                            if symbol <> args.eofSymbol
+                            then Line $"| {symbolToTerminalCase args symbol} _ ->"
+                            else Line $"| _ when lookaheadIsEof ->"
+                            Indented <| code {
+                                comment "reduce"
+                                for (argName, argType) in reductionArgs |> List.rev do
+                                    Line $"let {argName} = lhsStack.Pop() :?> {argType}"
+                                    Line "stateStack.Pop() |> ignore"
+                                Line $"let reductionArgs = ({argList})"
+                                Line $"let reduced = reducer.{productionToReducerFieldName args production} reductionArgs"
+                                Line "lhsStack.Push(reduced)"
+                                Line "let nextState = "
+                                Indented <| code {
+                                    Line "match stateStack.Peek() with"
+                                    let gotoFlat =
+                                        gotoTable
+                                        |> Map.toSeq
+                                        |> Seq.collect (fun (state, stateGoto) ->
+                                            stateGoto
+                                            |> Map.toSeq
+                                            |> Seq.filter (fun (s, _) -> s = production.from)
+                                            |> Seq.map (fun (_, dest) -> (state, dest)))
+                                        |> List.ofSeq
+                                    for (src, dest) in gotoFlat do
+                                        Line $"| {stateNumbers.[src]} -> {stateNumbers.[dest]}"
+                                    Line $"| _ -> {failwithInvalidState}"
+                                }
+                                Line "stateStack.Push(nextState)"
+                            }
+                        | Accept ->
+                            if symbol <> args.eofSymbol then failwith "Accept on non eof"
+
+                            Line $"| _ when lookaheadIsEof ->"
+                            Indented <| code {
+                                comment "accept"
+                                Line $"result <- lhsStack.Pop() :?> {startingSymbolType}"
+                                Line "accepted <- true"
+                                Line "keepGoing <- false"
+                            }
+                    Line "| _ ->"
+                    Indented <| code {
+                        comment "error"
+                        Line "keepGoing <- false"
                     }
-                Line $"| _ -> {failwithInvalidState}"
-            }
+                }
+            Line $"| _ -> {failwithInvalidState}"
         }
         blankLine
         Line "if accepted"
