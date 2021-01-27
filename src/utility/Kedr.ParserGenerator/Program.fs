@@ -26,8 +26,9 @@ let main argv =
         1
     | Ok parserDefinition ->
         let grammar = Grammar.fromProductions parserDefinition.productions
-        let automaton = Automaton.create eof grammar
-        let parsingTable = ParsingTable.create automaton
+        let parsingTable =
+            Automaton.create eof grammar
+            |> ParsingTable.create
 
         let args =
             { newLine = Environment.NewLine

@@ -1,11 +1,14 @@
 S       : Expr
-EXPR    : Expr
+EAPP    : Expr
+EPAREN  : Expr
+ESIMP   : Expr
 id      : string
 strlit  : string
 numlit  : uint32 * uint32 option
 pareno  : unit
 parenc  : unit
 
-S       -> EXPR
-EXPR    -> id | strlit | numlit
-EXPR    -> pareno EXPR parenc
+S       -> EAPP
+EAPP    -> EAPP EPAREN | EPAREN
+EPAREN  -> pareno EPAREN parenc | ESIMP
+ESIMP   -> id | strlit | numlit
