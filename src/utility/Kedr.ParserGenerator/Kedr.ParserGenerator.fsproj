@@ -8,7 +8,6 @@
     <ItemGroup>
         <Compile Include="Utils.fs" />
         <Compile Include="DependentSet.fs" />
-        <Compile Include="DefaultingMap.fs" />
         <Compile Include="Production.fs" />
         <Compile Include="Grammar.fs" />
         <Compile Include="LR0\Configuration.fs" />
