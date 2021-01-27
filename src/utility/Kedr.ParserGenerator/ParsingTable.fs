@@ -61,7 +61,8 @@ module internal ParsingTable =
                                         yield (symbol, transitionOnSymbol.destinationState)
                         } |> Map.ofSeq
 
-                    yield (state, stateGoto)
+                    if stateGoto |> Map.isEmpty |> not then
+                        yield (state, stateGoto)
             } |> Map.ofSeq
 
         { grammar = automaton.grammar
