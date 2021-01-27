@@ -30,6 +30,8 @@ type internal Configuration<'symbol when 'symbol : comparison> =
         sprintf "%s [%s]" mainPart lookahead
 
 module internal Configuration =
+    let isStarting cfg = cfg.cursorOffset = 0
+
     let isFinal cfg = cfg.cursorOffset = cfg.production.into.Length
 
     let getSymbolAfterCursor cfg =

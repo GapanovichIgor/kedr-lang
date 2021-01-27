@@ -1,13 +1,11 @@
-S : unit
-E : unit
-T : unit
-plus : unit
-int : unit
-po : unit
-pc : unit
+S       : Expr
+EXPR    : Expr
+id      : string
+strlit  : string
+numlit  : uint32 * uint32 option
+pareno  : unit
+parenc  : unit
 
-S -> E
-E -> T
-E -> E plus T
-T -> int
-T -> po E pc
+S       -> EXPR
+EXPR    -> id | strlit | numlit
+EXPR    -> pareno EXPR parenc

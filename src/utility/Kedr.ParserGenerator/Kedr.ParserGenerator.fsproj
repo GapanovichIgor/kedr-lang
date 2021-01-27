@@ -21,6 +21,7 @@
         <Compile Include="ParsingTable.fs" />
         <Compile Include="StableSorting.fs" />
         <Compile Include="ParserDefinition.fs" />
+        <Compile Include="CodeGen\Code.fs" />
         <Compile Include="CodeGen\CodeGenerator.fs" />
         <Compile Include="Program.fs" />
     </ItemGroup>

@@ -6,8 +6,8 @@
 
     <ItemGroup>
         <Content Include="ParserDefinition" />
-        <Compile Include="ParserImpl.fs" />
         <Compile Include="AST.fs" />
+        <Compile Include="ParserImpl.fs" />
         <Compile Include="Parser.fs" />
     </ItemGroup>
 

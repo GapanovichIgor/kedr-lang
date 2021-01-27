@@ -2,10 +2,10 @@ open System
 open System.IO
 open Kedr.ParserGenerator
 open Kedr.ParserGenerator.CodeGen
+open Kedr.ParserGenerator.CodeGen.CodeGenerator
 open Kedr.ParserGenerator.LALR
 
 let eof = "$"
-
 
 [<EntryPoint>]
 let main argv =
@@ -22,12 +22,22 @@ let main argv =
 
     match parserDefinition with
     | Error error ->
-        error |> Console.WriteLine
+        Console.WriteLine error
         1
     | Ok parserDefinition ->
         let grammar = Grammar.fromProductions parserDefinition.productions
         let automaton = Automaton.create eof grammar
         let parsingTable = ParsingTable.create automaton
+
+        let args =
+            { newLine = Environment.NewLine
+              eofSymbol = eof
+              symbolTypes = parserDefinition.symbolTypes
+              symbolToIdentifier = id
+              parsingTable = parsingTable
+              parserModuleName = moduleFullName }
+
         use outputFile = File.Create outputFilePath
-        CodeGenerator.generate eof parserDefinition parsingTable moduleFullName outputFile
+
+        generate args outputFile
         0
