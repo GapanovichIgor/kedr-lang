@@ -1,26 +1,6 @@
 namespace Kedr.ParserGenerator
 open Kedr.ParserGenerator.LALR
 
-type internal DefaultingMap<'k , 'v when 'k : comparison> =
-    private {
-        map : Map<'k, 'v>
-        defaultVal : 'v
-    }
-
-module internal DefaultingMap =
-    let empty defVal = { map = Map.empty; defaultVal = defVal }
-
-    let add k v dmap = { dmap with map = dmap.map |> Map.add k v }
-
-    let find k dmap =
-        match dmap.map |> Map.tryFind k with
-        | Some v -> v
-        | None -> dmap.defaultVal
-
-    let ofSeq defVal kvs =
-        let map = kvs |> Map.ofSeq
-        { map = map; defaultVal = defVal }
-
 type internal Action<'a> =
     | Shift
     | Reduce of Production<'a>
@@ -32,9 +12,10 @@ type internal TableKey<'a when 'a : comparison> = {
     symbol : 'a
 }
 
-type internal ParsingTable<'a when 'a : comparison> = {
-    goto : Map<TableKey<'a>, State<'a>>
-    action : DefaultingMap<TableKey<'a>, Action<'a>>
+type internal ParsingTable<'s when 's : comparison> = private {
+    grammar : Grammar<'s>
+    goto : Map<TableKey<'s>, State<'s>>
+    action : DefaultingMap<TableKey<'s>, Action<'s>>
 }
 
 module internal ParsingTable =
@@ -81,4 +62,6 @@ module internal ParsingTable =
                                 yield ({ state = state; symbol = symbol }, transitionOnSymbol.destinationState)
             } |> Map.ofSeq
 
-        { action = action; goto = goto }
+        { grammar = automaton.grammar
+          action = action
+          goto = goto }
