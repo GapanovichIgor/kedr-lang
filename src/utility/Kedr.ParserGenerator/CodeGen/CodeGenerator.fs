@@ -1,9 +1,6 @@
 module internal Kedr.ParserGenerator.CodeGen.CodeGenerator
 
 open Kedr.ParserGenerator.LALR
-
-#nowarn "0058"
-
 open Kedr.ParserGenerator
 open Kedr.ParserGenerator.CodeGen.Code
 open System.IO
@@ -23,10 +20,10 @@ let private header = code {
 let private moduleDecl name = Line $"module internal %s{name}"
 
 let private sumTypeDecl name cases = code {
-    Line $"type %s{name} ="
+    Line $"type {name} ="
     Indented <| code {
         for (name, type_) in cases do
-            Line $"| %s{name} of (%s{type_})"
+            Line $"| {name} of ({type_})"
     }
 }
 
@@ -38,6 +35,181 @@ let private recordDecl name fields = code {
     Line "}"
 }
 
+let private failwithInvalidState = "failwith \"Parser is in an invalid state. This is a bug in the parser generator.\""
+
+let private idtTerminal = "Terminal"
+let private idtReducer = "Reducer"
+
+let private idReducer = "reducer"
+let private idInputEnumerator = "inputEnumerator"
+let private idLhsStack = "lhsStack"
+let private idStateStack = "stateStack"
+let private idResult = "result"
+let private idAccepted = "accepted"
+let private idLookahead = "lookahead"
+let private idLookaheadIsEof = "lookaheadIsEof"
+let private idKeepGoing = "keepGoing"
+
+type private Ident =
+    | Ident of string
+    override this.ToString() = let (Ident str) = this in str
+
+type private Type =
+    | Type of string
+    override this.ToString() = let (Type str) = this in str
+
+type private Context<'s when 's : comparison> =
+    { eof : 's
+      resultType : Type
+      toIdent : 's -> Ident
+      getType : 's -> Type
+      getNum : State<'s> -> int
+      startingStateNum : int
+      productions : Production<'s> list
+      terminalCases : (Ident * Type) list
+      reducerFields : (Ident * Type) list
+      gotoTable : (State<'s> * 's * State<'s>) list
+      actionTable : (State<'s> * ('s * Action<'s>) list) list }
+
+let private symbolToTerminalCase toIdent s = $"T_{toIdent s}"
+
+let private productionToReducerFieldName ctx production =
+    production.from :: production.into
+    |> Seq.map (ctx.toIdent >> string)
+    |> String.concat "_"
+
+let private reducerType ctx =
+    let reducerFields =
+        ctx.productions
+        |> Seq.map (fun p ->
+            let name = productionToReducerFieldName ctx p
+
+            let type_ =
+                let argType =
+                    p.into
+                    |> Seq.map (fun s -> $"({ctx.getType s})")
+                    |> String.concat " * "
+                let resultType = ctx.getType p.from
+
+                $"{argType} -> {resultType}"
+
+            (name, type_))
+        |> Seq.sort
+        |> List.ofSeq
+
+    recordDecl idtReducer reducerFields
+
+let private shift ctx lookahead newState =
+    code {
+        Line $"| {symbolToTerminalCase ctx.toIdent lookahead} x ->"
+        Indented <| code {
+            comment "shift"
+            Line $"{idLhsStack}.Push(x)"
+            Line $"if {idInputEnumerator}.MoveNext()"
+            Line $"then {idLookahead} <- {idInputEnumerator}.Current"
+            Line $"else {idLookaheadIsEof} <- true"
+            Line $"{idStateStack}.Push({ctx.getNum newState})"
+        }
+    }
+
+let private reduce ctx lookahead production =
+    let goto = ctx.gotoTable |> List.filter (fun (_, s, _) -> s = production.from)
+
+    let reductionArgs =
+        production.into
+        |> Seq.mapi (fun i s -> ($"arg{i + 1}", ctx.getType s) )
+        |> List.ofSeq
+
+    let argList =
+        reductionArgs
+        |> Seq.map fst
+        |> String.concat ", "
+
+    code {
+        if lookahead <> ctx.eof
+        then Line $"| {symbolToTerminalCase ctx.toIdent lookahead} _ ->"
+        else Line $"| _ when {idLookaheadIsEof} ->"
+
+        Indented <| code {
+            comment "reduce"
+            for (argName, argType) in reductionArgs |> List.rev do
+                Line $"let {argName} = {idLhsStack}.Pop() :?> {argType}"
+                Line $"{idStateStack}.Pop() |> ignore"
+            Line $"let reductionArgs = ({argList})"
+            Line $"let reduced = {idReducer}.{productionToReducerFieldName ctx production} reductionArgs"
+            Line $"{idLhsStack}.Push(reduced)"
+            Line "let nextState ="
+            Indented <| code {
+                Line $"match {idStateStack}.Peek() with"
+                for (src, _, dest) in goto do
+                    Line $"| {ctx.getNum src} -> {ctx.getNum dest}"
+                Line $"| _ -> {failwithInvalidState}"
+            }
+            Line $"{idStateStack}.Push(nextState)"
+        }
+    }
+
+let private accept ctx =
+    code {
+        Line $"| _ when {idLookaheadIsEof} ->"
+        Indented <| code {
+            comment "accept"
+            Line $"{idResult} <- {idLhsStack}.Pop() :?> {ctx.resultType}"
+            Line $"{idAccepted} <- true"
+            Line $"{idKeepGoing} <- false"
+        }
+    }
+
+let private parseFunction ctx = code {
+    Line $"let parse ({idReducer} : {idtReducer}) (input : {idtTerminal} seq) : Result<{ctx.resultType}, string> ="
+    Indented <| code {
+        Line $"use {idInputEnumerator} = input.GetEnumerator()"
+        Line $"let {idLhsStack} = System.Collections.Generic.Stack<obj>(50)"
+        Line $"let {idStateStack} = System.Collections.Generic.Stack<int>(50)"
+        Line $"let mutable {idResult} = Unchecked.defaultof<{ctx.resultType}>"
+        Line $"let mutable {idAccepted} = false"
+        blankLine
+        Line $"{idStateStack}.Push({ctx.startingStateNum})"
+        blankLine
+        Line $"let mutable ({idLookahead}, {idLookaheadIsEof}) ="
+        Indented <| code {
+            Line $"if {idInputEnumerator}.MoveNext()"
+            Line $"then ({idInputEnumerator}.Current, false)"
+            Line $"else (Unchecked.defaultof<{idtTerminal}>, true)"
+        }
+        blankLine
+        Line $"let mutable {idKeepGoing} = true"
+        Line $"while {idKeepGoing} do"
+        Indented <| code {
+            Line $"match {idStateStack}.Peek() with"
+            for (state, stateActions) in ctx.actionTable do
+                Line $"| {ctx.getNum state} ->"
+                Indented <| code {
+                    Line $"match {idLookahead} with"
+
+                    let stateActions = stateActions |> List.sortBy (fun (s, _) -> if s = ctx.eof then 0 else 1)
+
+                    for (lookahead, action) in stateActions do
+                        match action with
+                        | Shift newState -> shift ctx lookahead newState
+                        | Reduce production -> reduce ctx lookahead production
+                        | Accept -> accept ctx
+
+                    Line "| _ ->"
+                    Indented <| code {
+                        comment "error"
+                        Line $"{idKeepGoing} <- false"
+                    }
+                }
+            Line $"| _ -> {failwithInvalidState}"
+        }
+        blankLine
+        Line $"if {idAccepted}"
+        Line $"then Ok {idResult}"
+        Line "else Error \"TODO error reporting\""
+    }
+}
+
 type CodeGenArgs<'s when 's : comparison> =
     { newLine : string
       eofSymbol : 's
@@ -46,196 +218,117 @@ type CodeGenArgs<'s when 's : comparison> =
       parsingTable : ParsingTable<'s>
       parserModuleName : string }
 
-let private symbolToTerminalCase args s = "T_" + (args.symbolToIdentifier s)
+let private createContext args =
+    let toIdent = args.symbolToIdentifier >> Ident
 
-let private productionToReducerFieldName args production =
-    let from = args.symbolToIdentifier production.from
-    let into =
-        production.into
-        |> Seq.map args.symbolToIdentifier
-        |> String.concat "_"
+    let getType s = args.symbolTypes |> Map.find s |> Type
 
-    $"{from}_{into}"
-
-let private reducerType args =
-    let reducerFields =
-        args.parsingTable.grammar.productions
-        |> Seq.map (fun p ->
-            let name = productionToReducerFieldName args p
-
-            let type_ =
-                let argType =
-                    p.into
-                    |> Seq.map (fun s -> "(" + args.symbolTypes.[s] + ")")
-                    |> String.concat " * "
-                let resultType = args.symbolTypes.[p.from]
-
-                $"{argType} -> {resultType}"
-
-            (name, type_))
-        |> Seq.sort
-        |> List.ofSeq
-
-    recordDecl "Reducer" reducerFields
-
-let private failwithInvalidState = "failwith \"Parser is in an invalid state. This is a bug in the parser generator.\""
-
-let private parseFunction args terminalCases = code {
-    let actionTable = args.parsingTable.action
-    let gotoTable = args.parsingTable.goto
-    let grammar = args.parsingTable.grammar
-
-    let startingSymbolType = args.symbolTypes.[grammar.startingSymbol]
+    let resultType = args.parsingTable.grammar.startingSymbol |> getType
 
     let states =
-        actionTable
-        |> Map.toList
-        |> List.map fst
+        args.parsingTable.action
+        |> Map.toSeq
+        |> Seq.map fst
+        |> List.ofSeq
 
     let stateNumbers =
         states
         |> Seq.mapi (fun i state -> (state, i))
         |> Map.ofSeq
 
-    let startingState =
+    let getNum s = stateNumbers |> Map.find s
+
+    let startingStateNum =
         states
         |> Seq.find (fun state ->
             state.configurations
             |> Seq.exists (fun cfg ->
-                cfg.production.from = grammar.startingSymbol &&
+                cfg.production.from = args.parsingTable.grammar.startingSymbol &&
                 cfg |> Configuration.isStarting))
+        |> getNum
 
-    Line $"let parse (reducer : Reducer) (input : Terminal seq) : Result<{startingSymbolType}, string> ="
-    Indented <| code {
-        Line "use inputEnumerator = input.GetEnumerator()"
-        Line "let lhsStack = System.Collections.Generic.Stack<obj>(50)"
-        Line "let stateStack = System.Collections.Generic.Stack<int>(50)"
-        Line $"let mutable result = Unchecked.defaultof<{startingSymbolType}>"
-        Line "let mutable accepted = false"
-        blankLine
-        Line $"stateStack.Push({stateNumbers.[startingState]})"
-        blankLine
-//        Line "let mutable lookaheadIsEof = false"
-        Line "let mutable (lookahead, lookaheadIsEof) ="
-        Indented <| code {
-            Line "if inputEnumerator.MoveNext()"
-            Line "then (inputEnumerator.Current, false)"
-            Line "else (Unchecked.defaultof<Terminal>, true)"
-        }
-        blankLine
-        Line "let mutable keepGoing = true"
-        Line "while keepGoing do"
-        Indented <| code {
-            Line "match stateStack.Peek() with"
-            for (state, stateActions) in actionTable |> Map.toSeq do
-                Line $"| {stateNumbers.[state]} ->"
-                Indented <| code {
-                    Line "match lookahead with"
-
-                    let stateActions =
-                        stateActions
-                        |> Map.toSeq
-                        |> Seq.sortBy (fun (s, _) -> if s = args.eofSymbol then 0 else 1)
-
-                    for (symbol, action) in stateActions do
-                        match action with
-                        | Shift newState ->
-                            Line $"| {symbolToTerminalCase args symbol} x ->"
-                            Indented <| code {
-                                comment "shift"
-                                Line "lhsStack.Push(x)"
-                                Line "if inputEnumerator.MoveNext()"
-                                Line "then lookahead <- inputEnumerator.Current"
-                                Line "else lookaheadIsEof <- true"
-                                Line $"stateStack.Push({stateNumbers.[newState]})"
-                            }
-                        | Reduce production ->
-                            let reductionArgs =
-                                production.into
-                                |> Seq.mapi (fun i s -> ($"arg{i + 1}", args.symbolTypes.[s]) )
-                                |> List.ofSeq
-
-                            let argList =
-                                reductionArgs
-                                |> Seq.map fst
-                                |> String.concat ", "
-
-                            if symbol <> args.eofSymbol
-                            then Line $"| {symbolToTerminalCase args symbol} _ ->"
-                            else Line $"| _ when lookaheadIsEof ->"
-                            Indented <| code {
-                                comment "reduce"
-                                for (argName, argType) in reductionArgs |> List.rev do
-                                    Line $"let {argName} = lhsStack.Pop() :?> {argType}"
-                                    Line "stateStack.Pop() |> ignore"
-                                Line $"let reductionArgs = ({argList})"
-                                Line $"let reduced = reducer.{productionToReducerFieldName args production} reductionArgs"
-                                Line "lhsStack.Push(reduced)"
-                                Line "let nextState = "
-                                Indented <| code {
-                                    Line "match stateStack.Peek() with"
-                                    let gotoFlat =
-                                        gotoTable
-                                        |> Map.toSeq
-                                        |> Seq.collect (fun (state, stateGoto) ->
-                                            stateGoto
-                                            |> Map.toSeq
-                                            |> Seq.filter (fun (s, _) -> s = production.from)
-                                            |> Seq.map (fun (_, dest) -> (state, dest)))
-                                        |> List.ofSeq
-                                    for (src, dest) in gotoFlat do
-                                        Line $"| {stateNumbers.[src]} -> {stateNumbers.[dest]}"
-                                    Line $"| _ -> {failwithInvalidState}"
-                                }
-                                Line "stateStack.Push(nextState)"
-                            }
-                        | Accept ->
-                            if symbol <> args.eofSymbol then failwith "Accept on non eof"
-
-                            Line $"| _ when lookaheadIsEof ->"
-                            Indented <| code {
-                                comment "accept"
-                                Line $"result <- lhsStack.Pop() :?> {startingSymbolType}"
-                                Line "accepted <- true"
-                                Line "keepGoing <- false"
-                            }
-                    Line "| _ ->"
-                    Indented <| code {
-                        comment "error"
-                        Line "keepGoing <- false"
-                    }
-                }
-            Line $"| _ -> {failwithInvalidState}"
-        }
-        blankLine
-        Line "if accepted"
-        Line "then Ok result"
-        Line "else Error \"TODO error reporting\""
-    }
-}
-
-let generate (args : CodeGenArgs<'s>) (stream : Stream) : unit =
-    let writer = new StreamWriter(stream)
+    let productions =
+        args.parsingTable.grammar.productions
+        |> List.ofSeq
 
     let terminalCases =
         args.parsingTable.grammar.terminals
         |> Seq.map (fun t ->
-            let name = "T_" + (args.symbolToIdentifier t)
-            let type_ = args.symbolTypes |> Map.find t
+            let name = symbolToTerminalCase toIdent t |> Ident
+            let type_ = getType t
             (name, type_))
         |> Seq.sort
         |> List.ofSeq
+
+    let reducerFields =
+        args.parsingTable.grammar.productions
+        |> Seq.map (fun p ->
+            let name =
+                p.from :: p.into
+                |> Seq.map (toIdent >> string)
+                |> String.concat "_"
+                |> Ident
+
+            let type_ =
+                let argType =
+                    p.into
+                    |> Seq.map (fun s -> $"({getType s})")
+                    |> String.concat " * "
+                let resultType = getType p.from
+
+                $"{argType} -> {resultType}" |> Type
+            (name, type_))
+        |> Seq.sortBy fst
+        |> List.ofSeq
+
+    let gotoTable =
+        args.parsingTable.goto
+        |> Map.toSeq
+        |> Seq.collect (fun (src, stateGoto) ->
+            stateGoto
+            |> Map.toSeq
+            |> Seq.map (fun (symbol, dest) ->
+                (src, symbol, dest)))
+        |> List.ofSeq
+
+    let actionTable =
+        args.parsingTable.action
+        |> Map.toSeq
+        |> Seq.map (fun (state, stateActions) ->
+            let actions =
+                stateActions
+                |> Map.toSeq
+                |> List.ofSeq
+            (state, actions))
+        |> List.ofSeq
+
+    { eof = args.eofSymbol
+      resultType = resultType
+      toIdent = toIdent
+      getType = getType
+      getNum = getNum
+      startingStateNum = startingStateNum
+      productions = productions
+      terminalCases = terminalCases
+      reducerFields = reducerFields
+      gotoTable = gotoTable
+      actionTable = actionTable }
+
+let generate (args : CodeGenArgs<'s>) (stream : Stream) : unit =
+    let writer = new StreamWriter(stream)
+
+    let ctx = createContext args
 
     let parserCode =
         code {
             header
             moduleDecl args.parserModuleName
             blankLine
-            sumTypeDecl "Terminal" terminalCases
+            sumTypeDecl "Terminal" ctx.terminalCases
             blankLine
-            reducerType args
+            reducerType ctx
             blankLine
-            parseFunction args terminalCases
+            parseFunction ctx
         }
 
     parserCode |> write args.newLine writer
