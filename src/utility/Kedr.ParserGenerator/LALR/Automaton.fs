@@ -13,6 +13,29 @@ type internal Automaton<'symbol when 'symbol : comparison> =
     member this.transitions = this._transitions
     member this.states = this._states
 
+    override this.ToString() =
+        let stateNumbers =
+            this.states
+            |> Seq.mapi (fun i state -> (state, i))
+            |> Map.ofSeq
+
+        let sb = System.Text.StringBuilder()
+
+        let appendLine str = sb.AppendLine(str) |> ignore
+
+        appendLine "States"
+        for state in this.states do
+            appendLine $"   {stateNumbers.[state]} {state}"
+
+        appendLine "Transitions"
+        for transition in this.transitions do
+            appendLine (
+                $"   {stateNumbers.[transition.sourceState]}" +
+                $" --{transition.symbol}--> " +
+                $"{stateNumbers.[transition.destinationState]}")
+
+        sb.ToString()
+
 module internal Automaton =
     type private AugmentedSymbol<'s when 's : comparison> =
         | PlainSymbol of 's
