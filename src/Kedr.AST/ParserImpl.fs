@@ -25,7 +25,7 @@ type Reducer = {
 
 let parse (reducer : Reducer) (input : Terminal seq) : Result<Expr, string> =
     use inputEnumerator = input.GetEnumerator()
-    let lhsStack = System.Collections.Generic.Stack<obj>(50)
+    let lhsStack = System.Collections.Stack(50)
     let stateStack = System.Collections.Generic.Stack<int>(50)
     let mutable result = Unchecked.defaultof<Expr>
     let mutable accepted = false

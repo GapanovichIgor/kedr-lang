@@ -164,7 +164,7 @@ let private parseFunction ctx = code {
     Line $"let parse ({idReducer} : {idtReducer}) (input : {idtTerminal} seq) : Result<{ctx.resultType}, string> ="
     Indented <| code {
         Line $"use {idInputEnumerator} = input.GetEnumerator()"
-        Line $"let {idLhsStack} = System.Collections.Generic.Stack<obj>(50)"
+        Line $"let {idLhsStack} = System.Collections.Stack(50)"
         Line $"let {idStateStack} = System.Collections.Generic.Stack<int>(50)"
         Line $"let mutable {idResult} = Unchecked.defaultof<{ctx.resultType}>"
         Line $"let mutable {idAccepted} = false"
