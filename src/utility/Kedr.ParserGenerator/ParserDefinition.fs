@@ -26,7 +26,7 @@ module internal ParserDefinition =
         else
             None
 
-    let private productionRegex = Regex("^\s*(?<symbol>[A-Z]+)\s*->\s*(?<into>.+?)\s*$")
+    let private productionRegex = Regex("^\s*(?<symbol>[A-Za-z]+)\s*->\s*(?<into>.+?)\s*$")
     let private (|AsProduction|_|) (line : string) =
         let m = productionRegex.Match(line)
         if m.Success then
@@ -87,7 +87,7 @@ module internal ParserDefinition =
                 |> Seq.choose (function
                     | Typing (s, t) -> Some (s, t)
                     | _ -> None)
-                |> Map.ofSeq
+                |> Set.ofSeq
 
             let productions =
                 lines
@@ -101,13 +101,17 @@ module internal ParserDefinition =
 
             let symbolsInProductions = productions |> Seq.collect Production.getSymbols
 
-            let untypedSymbols =
+            let defaultTypings =
                 symbolsInProductions
-                |> Seq.filter (symbolTypes.ContainsKey >> not)
+                |> Seq.filter (fun s ->
+                    symbolTypes
+                    |> Seq.map fst
+                    |> Seq.contains s
+                    |> not)
+                |> Seq.map (fun s ->
+                    (s, "unit"))
                 |> Set.ofSeq
 
-            if not untypedSymbols.IsEmpty then
-                let symbolList = untypedSymbols |> String.concat ", "
-                Error (sprintf "Missing type for symbols %s" symbolList)
-            else
-                Ok { symbolTypes = symbolTypes; productions = productions }
+            let symbolTypes = symbolTypes + defaultTypings |> Map.ofSeq
+
+            Ok { symbolTypes = symbolTypes; productions = productions }
