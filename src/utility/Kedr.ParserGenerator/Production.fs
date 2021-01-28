@@ -13,7 +13,7 @@ type Production<'symbol> =
             |> Seq.map (fun s -> s.ToString())
             |> String.concat " "
 
-        sprintf "%s 🠚 %s" (this.from.ToString()) result
+        sprintf "%s -> %s" (this.from.ToString()) result
 
 module Production =
     let getSymbols prod =
