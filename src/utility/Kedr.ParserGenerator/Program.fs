@@ -6,6 +6,7 @@ open Kedr.ParserGenerator.CodeGen.CodeGenerator
 open Kedr.ParserGenerator.LALR
 
 let eof = "$"
+let epsilon = "''"
 
 [<EntryPoint>]
 let main argv =
@@ -18,7 +19,7 @@ let main argv =
 
     use definitionFile = File.OpenRead definitionFilePath
 
-    let parserDefinition = ParserDefinition.parse definitionFile
+    let parserDefinition = ParserDefinition.parse epsilon definitionFile
 
     match parserDefinition with
     | Error error ->

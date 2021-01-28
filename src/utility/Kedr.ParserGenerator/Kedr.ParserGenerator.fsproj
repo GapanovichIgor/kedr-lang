@@ -7,7 +7,6 @@
 
     <ItemGroup>
         <Compile Include="Utils.fs" />
-        <Compile Include="DependentSet.fs" />
         <Compile Include="Production.fs" />
         <Compile Include="Grammar.fs" />
         <Compile Include="LR0\Configuration.fs" />
@@ -20,9 +19,9 @@
         <Compile Include="LALR\Automaton.fs" />
         <Compile Include="ParsingTable.fs" />
         <Compile Include="StableSorting.fs" />
-        <Compile Include="ParserDefinition.fs" />
         <Compile Include="CodeGen\Code.fs" />
         <Compile Include="CodeGen\CodeGenerator.fs" />
+        <Compile Include="ParserDefinition.fs" />
         <Compile Include="Program.fs" />
     </ItemGroup>
 

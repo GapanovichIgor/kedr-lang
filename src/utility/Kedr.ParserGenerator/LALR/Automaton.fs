@@ -76,44 +76,141 @@ module internal Automaton =
 
         Grammar.fromProductions augmentedProductions
 
+    type private FirstEntry<'s> =
+        | Symbol of 's
+        | Epsilon
+
+    // Define FIRST*(ω) as follows:
+    // ● FIRST*(ε) = { ε }
+    // ● FIRST*(tω) = { t }
+    // ● If ε ∉ FIRST(A):
+    //  – FIRST*(Aω) = FIRST(A)
+    // ● If ε ∈ FIRST(A):
+    //  – FIRST*(Aω) = (FIRST(A) - { ε }) ∪ FIRST*(ω)
+    let rec private firstOfString grammar first str =
+        match str with
+        | [] -> Epsilon |> Set.singleton
+        | t :: _ when grammar.terminals.Contains(t) -> Symbol t |> Set.singleton
+        | A :: w ->
+            let firstA = first A |> Set.ofSeq
+            if firstA.Contains(Epsilon) then
+                (firstA |> Set.filter ((<>) Epsilon))
+                +
+                firstOfString grammar first w
+            else
+                firstA
+
+    let private createFirstSets (grammar : Grammar<_>) =
+        let firstSets =
+            grammar.nonTerminals
+            |> Seq.map (fun s -> (s, HashSet()))
+            |> Map.ofSeq
+
+        // Initially, for all nonterminals A, set FIRST(A) = { t | A → tω for some ω }
+        for production in grammar.productions do
+            match production.into with
+            | t :: _ when grammar.terminals.Contains(t) ->
+                firstSets.[production.from].Add(Symbol t) |> ignore
+            | _ -> ()
+
+        let epsilonProductions = grammar.productions |> Set.filter (fun p -> p.into = [])
+
+        // For all nonterminals A where A → ε is a production, add ε to FIRST(A)
+        for production in epsilonProductions do
+            if production.into = [] then
+                firstSets.[production.from].Add(Epsilon) |> ignore
+
+
+        // Repeat the following until no changes occur:
+        // ● For each production A → α, set FIRST(A) = FIRST(A) ∪ FIRST*(α)
+        let firstOfString = firstOfString grammar (fun s -> firstSets.[s])
+
+        let nonEpsilonProductions = grammar.productions - epsilonProductions
+
+        let mutable keepGoing = true
+        while keepGoing do
+            keepGoing <- false
+            for production in nonEpsilonProductions do
+                let added =
+                    firstOfString production.into
+                    |> Seq.map(firstSets.[production.from].Add)
+                    |> Seq.exists id
+
+                keepGoing <- keepGoing || added
+
+        let firstSets = firstSets |> Map.map (fun _ v -> Set v)
+
+        firstSets
+
     let private createFollowSets
             (eof : 's)
             (grammar : Grammar<AugmentedSymbol<'s>>)
             : Map<AugmentedSymbol<'s>, 's Set> =
 
-        let createEmptyMap () =
-            grammar.symbols
-            |> Seq.map (fun s -> (s, DependentSet<'s>()))
+
+
+        let followSets =
+            grammar.nonTerminals
+            |> Seq.map (fun s -> (s, HashSet()))
             |> Map.ofSeq
 
-        let firstSets = createEmptyMap ()
-
-        for symbol in grammar.terminals do
-            match symbol with
-            | PlainSymbol plain -> firstSets.[symbol].Add(plain)
-            | TransitionalSymbol _ -> failwith "Terminal can not be a TransitionalSymbol"
-
+        // Initially, for each nonterminal A, set FOLLOW(A) = { t | B → αAtω is a production }
         for production in grammar.productions do
-            let firstOfInto = production.into |> List.head
-            firstSets.[production.from].Add(firstSets.[firstOfInto])
-
-        let firstSets = firstSets |> Map.map (fun _ set -> set.ToSet())
-
-        let followSets = createEmptyMap ()
-
-        followSets.[grammar.startingSymbol].Add(eof)
-
-        for production in grammar.productions do
-            let lastOfInto = production.into |> List.last
-            followSets.[lastOfInto].Add(followSets.[production.from])
-
             production.into
             |> Seq.pairwise
-            |> Seq.iter (fun (a, b) ->
-                firstSets.[b]
-                |> Seq.iter followSets.[a].Add)
+            |> Seq.filter (fun (A, t) -> grammar.nonTerminals.Contains(A) && grammar.terminals.Contains(t))
+            |> Seq.iter (fun (A, t) ->
+                match t with
+                | PlainSymbol t -> followSets.[A].Add(t) |> ignore
+                | _ -> failwith "A terminal should always be a PlainSymbol")
 
-        followSets |> Map.map (fun _ set -> set.ToSet())
+        // Add $ to FOLLOW(S), where S is the start symbol
+        followSets.[grammar.startingSymbol].Add(eof) |> ignore
+
+        // Repeat the following until no changes occur:
+        // ● If B → αAω is a production, set FOLLOW(A) = FOLLOW(A) ∪ FIRST*(ω) - { ε }.
+        // ● If B → αAω is a production and ε ∈ FIRST*(ω), set FOLLOW(A) = FOLLOW(A) ∪ FOLLOW(B).
+        let firstSets = createFirstSets grammar
+
+        let firstOfString = firstOfString grammar (fun s -> firstSets.[s])
+
+        let mutable keepGoing = true
+        while keepGoing do
+            keepGoing <- false
+            for production in grammar.productions do
+                let rec addFollow intoTail =
+                    match intoTail with
+                    | [] -> ()
+                    | t :: _ when grammar.terminals.Contains(t) -> ()
+                    | A :: w ->
+                        let followA = followSets.[A]
+                        let firstW = firstOfString w
+                        let added =
+                            firstW
+                            |> Seq.choose (function
+                                | Epsilon -> None
+                                | Symbol (PlainSymbol t) -> Some t
+                                | _ -> failwith "First set can not contain non-terminals")
+                            |> Seq.map followA.Add
+                            |> Seq.exists id
+
+                        keepGoing <- keepGoing || added
+
+                        if firstW |> Set.contains Epsilon then
+                            let followB = followSets.[production.from]
+
+                            let added =
+                                followB
+                                |> Seq.map followA.Add
+                                |> Seq.exists id
+
+                            keepGoing <- keepGoing || added
+
+                addFollow production.into
+
+        let followSets = followSets |> Map.map (fun _ v -> Set v)
+
+        followSets
 
     let private createLookahead
             (lr0 : LR0.Automaton<'s>)

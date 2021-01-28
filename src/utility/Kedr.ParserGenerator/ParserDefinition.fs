@@ -27,26 +27,35 @@ module internal ParserDefinition =
             None
 
     let private productionRegex = Regex("^\s*(?<symbol>[A-Za-z]+)\s*->\s*(?<into>.+?)\s*$")
-    let private (|AsProduction|_|) (line : string) =
+    let private (|AsProduction|_|) (epsilon : string) (line : string) =
         let m = productionRegex.Match(line)
         if m.Success then
             let symbol = m.Groups.["symbol"].Value
             let into = m.Groups.["into"].Value
             let intoAlternatives =
                 into.Split('|')
-                |> Seq.map (fun i -> i.Trim().Split(' '))
+                |> Seq.map (fun i -> i.Trim().Split(' ') |> List.ofArray)
+                |> List.ofSeq
 
-            if intoAlternatives |> Seq.exists Seq.isEmpty then None else
+            let validSymbol text =
+                text |> Seq.forall (fun c -> c >= 'A' && c <= 'Z' || c >= 'a' && c <= 'z')
 
-            let validSymbol text = text |> Seq.forall (fun c -> c >= 'A' && c <= 'Z' || c >= 'a' && c <= 'z')
+            let valid =
+                intoAlternatives
+                |> List.forall(fun i ->
+                    i = [epsilon] ||
+                    not i.IsEmpty && i |> List.forall validSymbol)
 
-            if intoAlternatives |> Seq.exists (Seq.exists (not << validSymbol)) then None else
+            if not valid then None else
 
             intoAlternatives
-            |> Seq.map (fun intoSymbols ->
+            |> List.map (fun intoSymbols ->
+                let intoSymbols =
+                    if intoSymbols = [epsilon]
+                    then []
+                    else intoSymbols
                 { from = symbol
-                  into = intoSymbols |> List.ofArray })
-            |> List.ofSeq
+                  into = intoSymbols})
             |> Productions
             |> Some
         else
@@ -57,14 +66,14 @@ module internal ParserDefinition =
         then Some ()
         else None
 
-    let private parseLine (line : string) =
+    let private parseLine (epsilon : string) (line : string) =
         match line with
-        | AsProduction p -> Ok p
+        | AsProduction epsilon p -> Ok p
         | AsTyping t -> Ok t
         | AsBlankLine -> Ok Blank
         | _ -> Error "Malformed line. Expected a production (A -> B c | D) or a typing (A : T)."
 
-    let parse (stream : Stream) =
+    let parse (epsilon : string) (stream : Stream) =
         let reader = new StreamReader(stream)
 
         let parseResult =
@@ -72,7 +81,7 @@ module internal ParserDefinition =
                 while not reader.EndOfStream do
                     reader.ReadLine()
             }
-            |> Seq.map parseLine
+            |> Seq.map (parseLine epsilon)
             |> Seq.mapi (fun i res -> res |> Result.mapError (fun er -> sprintf "Error at line %i: %s" (i + 1) er))
             |> Result.fromSeqOfResults
 
@@ -103,6 +112,7 @@ module internal ParserDefinition =
 
             let defaultTypings =
                 symbolsInProductions
+                |> Seq.filter (fun s -> s <> epsilon)
                 |> Seq.filter (fun s ->
                     symbolTypes
                     |> Seq.map fst
