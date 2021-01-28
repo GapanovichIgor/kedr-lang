@@ -2,9 +2,24 @@ namespace Kedr.AST
 
 type Identity = string
 
+type TypeId = Identity // for now
+
 type Expr =
-    | InParens of Expr
     | IdRef of Identity
     | NumLit of integral : uint32 * fractional : uint32 option
     | StrLit of string
     | Application of Expr * Expr
+
+type BindingParameter =
+    { name : Identity
+      typeAnnotation : TypeId option }
+
+type Binding =
+    { name : Identity
+      parameters : BindingParameter list
+      typeAnnotation : TypeId option
+      body : Expr }
+
+type Program =
+    | PExpr of Expr
+    | PBinding of Binding

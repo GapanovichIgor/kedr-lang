@@ -1,14 +1,25 @@
-S       : Expr
+PROGRAM : Program
+
+BIND       : Binding
+BINDPARAMS : BindingParameter list
+BINDPARAM  : BindingParameter
+TYPEANNOT  : TypeId option
+
 EAPP    : Expr
 EPAREN  : Expr
 ESIMP   : Expr
+
 id      : string
 strlit  : string
 numlit  : uint32 * uint32 option
-pareno  : unit
-parenc  : unit
 
-S       -> EAPP
+PROGRAM -> EAPP | BIND
+
+BIND       -> let id BINDPARAMS TYPEANNOT eq EAPP
+BINDPARAMS -> BINDPARAMS BINDPARAM | ''
+BINDPARAM  -> pareno id colon id parenc | id
+TYPEANNOT  -> colon id | ''
+
 EAPP    -> EAPP EPAREN | EPAREN
 EPAREN  -> pareno EPAREN parenc | ESIMP
 ESIMP   -> id | strlit | numlit
