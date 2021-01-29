@@ -170,8 +170,6 @@ module internal Automaton =
             (grammar : Grammar<AugmentedSymbol<'s>>)
             : Map<AugmentedSymbol<'s>, 's Set> =
 
-
-
         let followSets =
             grammar.nonTerminals
             |> Seq.map (fun s -> (s, HashSet()))
@@ -204,7 +202,7 @@ module internal Automaton =
                 let rec addFollow intoTail =
                     match intoTail with
                     | [] -> ()
-                    | t :: _ when grammar.terminals.Contains(t) -> ()
+                    | t :: w when grammar.terminals.Contains(t) -> addFollow w
                     | A :: w ->
                         let followA = followSets.[A]
                         let firstW = firstOfString w
@@ -228,6 +226,8 @@ module internal Automaton =
                                 |> Seq.exists id
 
                             keepGoing <- keepGoing || added
+
+                        addFollow w
 
                 addFollow production.into
 
