@@ -26,13 +26,13 @@ let private reducer = {
     BINDPARAM_pareno_id_colon_id_parenc = fun ((), name, (), type_, ()) ->
         { name = name
           typeAnnotation = Some type_ }
-    BIND_let_id_BINDPARAMS_TYPEANNOT_eq_EAPP = fun ((), name, parameters, typeAnnotation, (), body) ->
+    BIND_let_id_BINDPARAMS_TYPEANNOT_eq_EXPR = fun ((), name, parameters, typeAnnotation, (), body) ->
         { name = name
           parameters = parameters |> List.rev
           typeAnnotation = typeAnnotation
           body = body }
     PROGRAM_BIND = PBinding
-    PROGRAM_EAPP = PExpr
+    PROGRAM_EXPR = PExpr
     TYPEANNOT_ = fun () -> None
     TYPEANNOT_colon_id = fun ((), type_) -> Some type_
     EAPP_EAPP_EPAREN = Application
@@ -42,6 +42,7 @@ let private reducer = {
     ESIMP_id = IdRef
     ESIMP_numlit = NumLit
     ESIMP_strlit = StrLit
+    EXPR_EAPP = id
 }
 
 let parse (tokens : seq<Token>) : Result<Program, string> =
