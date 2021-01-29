@@ -39,6 +39,7 @@ let private parseReader (reader : StreamReader) =
             slash
             equals
             notEquals
+            colon
             parenOpen
             parenClose
             squareBracketOpen

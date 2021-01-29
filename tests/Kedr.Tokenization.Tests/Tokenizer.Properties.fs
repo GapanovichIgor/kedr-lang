@@ -76,6 +76,11 @@ let [<PropertyOnce>] ``not equals is parsed as such``
 
     parse "/=" == [ T.NotEquals ]
 
+let [<PropertyOnce>] ``colon is parsed as such``
+    () =
+
+    parse ":" == [ T.Colon ]
+
 let [<PropertyOnce>] ``opening parenthesis is parsed as such``
     () =
 

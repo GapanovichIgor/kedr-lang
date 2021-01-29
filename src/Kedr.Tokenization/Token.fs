@@ -9,6 +9,7 @@ type Token =
     | Slash
     | Equals
     | NotEquals
+    | Colon
     | ParenOpen
     | ParenClose
     | SquareBracketOpen

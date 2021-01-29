@@ -39,6 +39,8 @@ let equals<'s> : TokenParser<'s> = constToken "=" Equals
 
 let notEquals<'s> : TokenParser<'s> = constToken "/=" NotEquals
 
+let colon<'s> : TokenParser<'s> = constToken ":" Colon
+
 let parenOpen<'s> : TokenParser<'s> = constToken "(" ParenOpen
 
 let parenClose<'s> : TokenParser<'s> = constToken ")" ParenClose
