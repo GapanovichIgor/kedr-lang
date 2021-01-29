@@ -35,7 +35,7 @@ let private recordDecl name fields = code {
     Line "}"
 }
 
-let private failwithInvalidState = "failwith \"Parser is in an invalid state. This is a bug in the parser generator.\""
+let private failwithInvalidState = "failwithInvalidState ()"
 
 let private idtTerminal = "Terminal"
 let private idtReducer = "Reducer"
@@ -315,6 +315,8 @@ let generate (args : CodeGenArgs<'s>) (stream : Stream) : unit =
             sumTypeDecl idtTerminal ctx.terminalCases
             blankLine
             recordDecl idtReducer ctx.reducerFields
+            blankLine
+            Line "let private failwithInvalidState () = failwith \"Parser is in an invalid state. This is a bug in the parser generator.\""
             blankLine
             parseFunction ctx
         }
