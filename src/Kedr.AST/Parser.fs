@@ -10,35 +10,35 @@ let private toTerminal token =
     | T.QuotedString content -> T_strlit content
     | T.Number (i, f) -> T_numlit (i, f)
     | T.Identifier id -> T_id id
-    | T.ParenOpen -> T_pareno ()
-    | T.ParenClose -> T_parenc ()
-    | T.Let -> T_let ()
-    | T.Equals -> T_eq ()
-    | T.Colon -> T_colon ()
+    | T.ParenOpen -> T_pareno
+    | T.ParenClose -> T_parenc
+    | T.Let -> T_let
+    | T.Equals -> T_eq
+    | T.Colon -> T_colon
     | _ -> failwith "TODO"
 
 let private reducer = {
-    BINDPARAMS_ = fun () -> []
+    BINDPARAMS_ = []
     BINDPARAMS_BINDPARAMS_BINDPARAM = fun (bindparams, bindparam) -> bindparam :: bindparams
     BINDPARAM_id = fun name ->
         { name = name
           typeAnnotation = None }
-    BINDPARAM_pareno_id_colon_id_parenc = fun ((), name, (), type_, ()) ->
+    BINDPARAM_pareno_id_colon_id_parenc = fun (name, type_) ->
         { name = name
           typeAnnotation = Some type_ }
-    BIND_let_id_BINDPARAMS_TYPEANNOT_eq_EXPR = fun ((), name, parameters, typeAnnotation, (), body) ->
+    BIND_let_id_BINDPARAMS_TYPEANNOT_eq_EXPR = fun (name, parameters, typeAnnotation, body) ->
         { name = name
           parameters = parameters |> List.rev
           typeAnnotation = typeAnnotation
           body = body }
     PROGRAM_BIND = PBinding
     PROGRAM_EXPR = PExpr
-    TYPEANNOT_ = fun () -> None
-    TYPEANNOT_colon_id = fun ((), type_) -> Some type_
+    TYPEANNOT_ = None
+    TYPEANNOT_colon_id = Some
     EAPP_EAPP_EPAREN = Application
     EAPP_EPAREN = id
     EPAREN_ESIMP = id
-    EPAREN_pareno_EPAREN_parenc = fun ((), e, ()) -> e
+    EPAREN_pareno_EPAREN_parenc = id
     ESIMP_id = IdRef
     ESIMP_numlit = NumLit
     ESIMP_strlit = StrLit

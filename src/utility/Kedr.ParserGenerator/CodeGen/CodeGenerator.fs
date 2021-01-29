@@ -23,7 +23,9 @@ let private sumTypeDecl name cases = code {
     Line $"type {name} ="
     Indented <| code {
         for (name, type_) in cases do
-            Line $"| {name} of ({type_})"
+            match type_ with
+            | Some type_ -> Line $"| {name} of ({type_})"
+            | None -> Line $"| {name}"
     }
 }
 
@@ -63,11 +65,11 @@ type private Context<'s when 's : comparison> =
     { eof : 's
       resultType : Type
       toIdent : 's -> Ident
-      getType : 's -> Type
+      getType : 's -> Type option
       getNum : State<'s> -> int
       startingStateNum : int
       productions : Production<'s> list
-      terminalCases : (Ident * Type) list
+      terminalCases : (Ident * Type option) list
       reducerFields : (Ident * Type) list
       gotoTable : (State<'s> * 's * State<'s>) list
       actionTable : (State<'s> * ('s * Action<'s>) list) list }
@@ -83,11 +85,16 @@ let private productionToReducerFieldName toIdent production =
     |> Ident
 
 let private shift ctx lookahead newState =
+    let caseName = symbolToTerminalCase ctx.toIdent lookahead
+    let isLookaheadTyped = ctx.getType lookahead <> None
     code {
-        Line $"| {symbolToTerminalCase ctx.toIdent lookahead} x ->"
+        if isLookaheadTyped
+        then Line $"| {caseName} x ->"
+        else Line $"| {caseName} ->"
         Indented <| code {
             comment "shift"
-            Line $"{idLhsStack}.Push(x)"
+            if isLookaheadTyped then
+                Line $"{idLhsStack}.Push(x)"
             Line $"if {idInputEnumerator}.MoveNext()"
             Line $"then {idLookahead} <- {idInputEnumerator}.Current"
             Line $"else {idLookaheadIsEof} <- true"
@@ -96,31 +103,40 @@ let private shift ctx lookahead newState =
     }
 
 let private applyReduction ctx production =
-    let reductionArgs =
+    let args =
         production.into
-        |> Seq.mapi (fun i s -> ($"arg{i + 1}", ctx.getType s) )
+        |> Seq.choose ctx.getType
+        |> Seq.mapi (fun i t -> ($"arg{i + 1}", t) )
         |> List.ofSeq
 
-    let argList =
-        reductionArgs
+    let argListStr =
+        args
         |> Seq.map fst
         |> String.concat ", "
 
+    let reducerField = productionToReducerFieldName ctx.toIdent production
+
     code {
-        for (argName, argType) in reductionArgs |> List.rev do
-            Line $"let {argName} = {idLhsStack}.Pop() :?> {argType}"
+        for _ = 1 to production.into.Length do
             Line $"{idStateStack}.Pop() |> ignore"
-        Line $"let reductionArgs = ({argList})"
-        Line $"let {idReductionResult} = {idReducer}.{productionToReducerFieldName ctx.toIdent production} reductionArgs"
+        for (argName, argType) in args |> List.rev do
+            Line $"let {argName} = {idLhsStack}.Pop() :?> {argType}"
+
+        if not args.IsEmpty then
+            Line $"let reductionArgs = ({argListStr})"
+            Line $"let {idReductionResult} = {idReducer}.{reducerField} reductionArgs"
+        else
+            Line $"let {idReductionResult} = {idReducer}.{reducerField}"
     }
 
 let private reduce ctx lookahead production =
     let goto = ctx.gotoTable |> List.filter (fun (_, s, _) -> s = production.from)
+    let isLookaheadTyped = ctx.getType lookahead <> None
 
     code {
-        if lookahead <> ctx.eof
-        then Line $"| {symbolToTerminalCase ctx.toIdent lookahead} _ ->"
-        else Line $"| _ when {idLookaheadIsEof} ->"
+        if lookahead = ctx.eof then Line $"| _ when {idLookaheadIsEof} ->"
+        elif isLookaheadTyped then Line $"| {symbolToTerminalCase ctx.toIdent lookahead} _ ->"
+        else Line $"| {symbolToTerminalCase ctx.toIdent lookahead} ->"
 
         Indented <| code {
             comment "reduce"
@@ -202,7 +218,7 @@ let private parseFunction ctx = code {
 type CodeGenArgs<'s when 's : comparison> =
     { newLine : string
       eofSymbol : 's
-      symbolTypes : Map<'s, string>
+      symbolTypes : DefaultingMap<'s, string option>
       symbolToIdentifier : 's -> string
       parsingTable : ParsingTable<'s>
       parserModuleName : string }
@@ -210,9 +226,12 @@ type CodeGenArgs<'s when 's : comparison> =
 let private createContext args =
     let toIdent = args.symbolToIdentifier >> Ident
 
-    let getType s = args.symbolTypes |> Map.find s |> Type
+    let getType s = args.symbolTypes |> DefaultingMap.find s |> Option.map Type
 
-    let resultType = args.parsingTable.grammar.startingSymbol |> getType
+    let resultType =
+        args.parsingTable.grammar.startingSymbol
+        |> getType
+        |> Option.defaultWith (fun () -> failwith "Starting symbol must have its type specified")
 
     let states =
         args.parsingTable.action
@@ -255,15 +274,18 @@ let private createContext args =
             let name = productionToReducerFieldName toIdent p
 
             let type_ =
-                let resultType = getType p.from
+                let resultType =
+                    getType p.from
+                    |> Option.defaultWith (fun () -> failwith "non-terminals must have their type specified")
+
                 let argType =
-                    if p.into.Length > 0 then
-                        p.into
-                        |> Seq.map (fun s -> $"({getType s})")
-                        |> String.concat " * "
-                    else
-                        "unit"
-                $"{argType} -> {resultType}" |> Type
+                    p.into
+                    |> Seq.choose (fun s -> getType s |> Option.map (fun t -> $"({t})"))
+                    |> String.concat " * "
+
+                if argType <> ""
+                then Type $"{argType} -> {resultType}"
+                else Type $"{resultType}"
 
             (name, type_))
         |> Seq.sortBy fst

@@ -6,7 +6,7 @@ open System.Text.RegularExpressions
 open Kedr.ParserGenerator
 
 type internal ParserDefinition = {
-    symbolTypes : Map<string, string>
+    symbolTypes : DefaultingMap<string, string option>
     productions : Production<string> Set
 }
 
@@ -94,9 +94,9 @@ module internal ParserDefinition =
             let symbolTypes =
                 lines
                 |> Seq.choose (function
-                    | Typing (s, t) -> Some (s, t)
+                    | Typing (s, t) -> Some (s, Some t)
                     | _ -> None)
-                |> Set.ofSeq
+                |> DefaultingMap.ofSeq None
 
             let productions =
                 lines
@@ -107,21 +107,5 @@ module internal ParserDefinition =
                 |> Set.ofSeq
 
             if productions.IsEmpty then Error "No productions defined" else
-
-            let symbolsInProductions = productions |> Seq.collect Production.getSymbols
-
-            let defaultTypings =
-                symbolsInProductions
-                |> Seq.filter (fun s -> s <> epsilon)
-                |> Seq.filter (fun s ->
-                    symbolTypes
-                    |> Seq.map fst
-                    |> Seq.contains s
-                    |> not)
-                |> Seq.map (fun s ->
-                    (s, "unit"))
-                |> Set.ofSeq
-
-            let symbolTypes = symbolTypes + defaultTypings |> Map.ofSeq
 
             Ok { symbolTypes = symbolTypes; productions = productions }
