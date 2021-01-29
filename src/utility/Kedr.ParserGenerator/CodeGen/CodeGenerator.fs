@@ -28,7 +28,7 @@ let private sumTypeDecl name cases = code {
 }
 
 let private recordDecl name fields = code {
-    let fieldLine (name, type_) = Line $"%s{name} : %s{type_}"
+    let fieldLine (name, type_) = Line $"{name} : {type_}"
 
     Line $"type %s{name} = {{"
     Indented (Block (fields |> List.map fieldLine))
@@ -49,6 +49,7 @@ let private idAccepted = "accepted"
 let private idLookahead = "lookahead"
 let private idLookaheadIsEof = "lookaheadIsEof"
 let private idKeepGoing = "keepGoing"
+let private idReductionResult = "reduced"
 
 type private Ident =
     | Ident of string
@@ -73,31 +74,13 @@ type private Context<'s when 's : comparison> =
 
 let private symbolToTerminalCase toIdent s = $"T_{toIdent s}"
 
-let private productionToReducerFieldName ctx production =
-    production.from :: production.into
-    |> Seq.map (ctx.toIdent >> string)
-    |> String.concat "_"
-
-let private reducerType ctx =
-    let reducerFields =
-        ctx.productions
-        |> Seq.map (fun p ->
-            let name = productionToReducerFieldName ctx p
-
-            let type_ =
-                let argType =
-                    p.into
-                    |> Seq.map (fun s -> $"({ctx.getType s})")
-                    |> String.concat " * "
-                let resultType = ctx.getType p.from
-
-                $"{argType} -> {resultType}"
-
-            (name, type_))
-        |> Seq.sort
-        |> List.ofSeq
-
-    recordDecl idtReducer reducerFields
+let private productionToReducerFieldName toIdent production =
+    (toIdent production.from).ToString() +
+        "_" +
+        (production.into
+        |> Seq.map (toIdent >> string)
+        |> String.concat "_")
+    |> Ident
 
 let private shift ctx lookahead newState =
     code {
@@ -112,9 +95,7 @@ let private shift ctx lookahead newState =
         }
     }
 
-let private reduce ctx lookahead production =
-    let goto = ctx.gotoTable |> List.filter (fun (_, s, _) -> s = production.from)
-
+let private applyReduction ctx production =
     let reductionArgs =
         production.into
         |> Seq.mapi (fun i s -> ($"arg{i + 1}", ctx.getType s) )
@@ -126,18 +107,25 @@ let private reduce ctx lookahead production =
         |> String.concat ", "
 
     code {
+        for (argName, argType) in reductionArgs |> List.rev do
+            Line $"let {argName} = {idLhsStack}.Pop() :?> {argType}"
+            Line $"{idStateStack}.Pop() |> ignore"
+        Line $"let reductionArgs = ({argList})"
+        Line $"let {idReductionResult} = {idReducer}.{productionToReducerFieldName ctx.toIdent production} reductionArgs"
+    }
+
+let private reduce ctx lookahead production =
+    let goto = ctx.gotoTable |> List.filter (fun (_, s, _) -> s = production.from)
+
+    code {
         if lookahead <> ctx.eof
         then Line $"| {symbolToTerminalCase ctx.toIdent lookahead} _ ->"
         else Line $"| _ when {idLookaheadIsEof} ->"
 
         Indented <| code {
             comment "reduce"
-            for (argName, argType) in reductionArgs |> List.rev do
-                Line $"let {argName} = {idLhsStack}.Pop() :?> {argType}"
-                Line $"{idStateStack}.Pop() |> ignore"
-            Line $"let reductionArgs = ({argList})"
-            Line $"let reduced = {idReducer}.{productionToReducerFieldName ctx production} reductionArgs"
-            Line $"{idLhsStack}.Push(reduced)"
+            applyReduction ctx production
+            Line $"{idLhsStack}.Push({idReductionResult})"
             Line "let nextState ="
             Indented <| code {
                 Line $"match {idStateStack}.Peek() with"
@@ -149,12 +137,13 @@ let private reduce ctx lookahead production =
         }
     }
 
-let private accept ctx =
+let private accept ctx production =
     code {
         Line $"| _ when {idLookaheadIsEof} ->"
         Indented <| code {
             comment "accept"
-            Line $"{idResult} <- {idLhsStack}.Pop() :?> {ctx.resultType}"
+            applyReduction ctx production
+            Line $"{idResult} <- {idReductionResult}"
             Line $"{idAccepted} <- true"
             Line $"{idKeepGoing} <- false"
         }
@@ -193,7 +182,7 @@ let private parseFunction ctx = code {
                         match action with
                         | Shift newState -> shift ctx lookahead newState
                         | Reduce production -> reduce ctx lookahead production
-                        | Accept -> accept ctx
+                        | Accept production -> accept ctx production
 
                     Line "| _ ->"
                     Indented <| code {
@@ -263,20 +252,19 @@ let private createContext args =
     let reducerFields =
         args.parsingTable.grammar.productions
         |> Seq.map (fun p ->
-            let name =
-                p.from :: p.into
-                |> Seq.map (toIdent >> string)
-                |> String.concat "_"
-                |> Ident
+            let name = productionToReducerFieldName toIdent p
 
             let type_ =
-                let argType =
-                    p.into
-                    |> Seq.map (fun s -> $"({getType s})")
-                    |> String.concat " * "
                 let resultType = getType p.from
-
+                let argType =
+                    if p.into.Length > 0 then
+                        p.into
+                        |> Seq.map (fun s -> $"({getType s})")
+                        |> String.concat " * "
+                    else
+                        "unit"
                 $"{argType} -> {resultType}" |> Type
+
             (name, type_))
         |> Seq.sortBy fst
         |> List.ofSeq
@@ -324,9 +312,9 @@ let generate (args : CodeGenArgs<'s>) (stream : Stream) : unit =
             header
             moduleDecl args.parserModuleName
             blankLine
-            sumTypeDecl "Terminal" ctx.terminalCases
+            sumTypeDecl idtTerminal ctx.terminalCases
             blankLine
-            reducerType ctx
+            recordDecl idtReducer ctx.reducerFields
             blankLine
             parseFunction ctx
         }

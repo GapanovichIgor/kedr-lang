@@ -4,7 +4,7 @@ open Kedr.ParserGenerator.LALR
 type internal Action<'s when 's : comparison> =
     | Shift of State<'s>
     | Reduce of Production<'s>
-    | Accept
+    | Accept of Production<'s>
 
 type internal ParsingTable<'s when 's : comparison> =
     private {
@@ -47,7 +47,7 @@ type internal ParsingTable<'s when 's : comparison> =
             for (symbol, action) in stateAction |> Map.toSeq do
                 let action =
                     match action with
-                    | Accept -> "acc"
+                    | Accept _ -> "acc"
                     | Shift state -> $"s{stateNumbers.[state]}"
                     | Reduce prod -> $"r{productionNumbers.[prod]}"
                 appendLine $"   {stateNumbers.[state]} {symbol} {action}"
@@ -72,7 +72,7 @@ module internal ParsingTable =
                                 for lookahead in cfg.lookahead do
                                     let action =
                                         if cfg.production.from = automaton.grammar.startingSymbol
-                                        then Accept
+                                        then Accept cfg.production
                                         else Reduce cfg.production
 
                                     yield (lookahead, action)
