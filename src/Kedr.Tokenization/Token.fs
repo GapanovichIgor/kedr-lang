@@ -3,6 +3,7 @@ namespace Kedr.Tokenization
 type Token =
     | Let
     | Type
+    | Module
     | Plus
     | Minus
     | Asterisk

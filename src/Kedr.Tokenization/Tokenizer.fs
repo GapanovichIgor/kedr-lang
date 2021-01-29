@@ -31,6 +31,7 @@ let private parseReader (reader : StreamReader) =
         chooseFirstLongest [
             let'
             type'
+            module'
             identifier
 
             plus

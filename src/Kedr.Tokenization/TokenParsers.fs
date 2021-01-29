@@ -27,6 +27,8 @@ let let'<'s> : TokenParser<'s> = constToken "let" Let
 
 let type'<'s> : TokenParser<'s> = constToken "type" Token.Type
 
+let module'<'s> : TokenParser<'s> = constToken "module" Module
+
 let plus<'s> : TokenParser<'s> = constToken "+" Plus
 
 let minus<'s> : TokenParser<'s> = constToken "-" Minus

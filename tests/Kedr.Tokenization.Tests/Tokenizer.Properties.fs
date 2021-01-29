@@ -46,6 +46,11 @@ let [<PropertyOnce>] ``type is parsed as such``
 
     parse "type" == [ T.Type ]
 
+let [<PropertyOnce>] ``module is parsed as such``
+    () =
+
+    parse "module" == [ T.Module ]
+
 let [<PropertyOnce>] ``plus is parsed as such``
     () =
 

@@ -24,17 +24,17 @@ let [<PropertyOnce>] ``func application is left associative``
     parse [ T.Identifier "foo"; T.Identifier "x"; T.Identifier "y" ] ==
         Ok (PExpr (Application (Application (IdRef "foo", IdRef "x"), IdRef "y")))
 
-let [<PropertyOnce>] ``const binding is parser as such``
+let [<PropertyOnce>] ``const binding is parsed as such``
     () =
     parse [ T.Let; T.Identifier "foo"; T.Equals; T.QuotedString "hello" ] ==
         Ok (PBinding { name = "foo"; parameters = []; typeAnnotation = None; body = StrLit "hello" })
 
-let [<PropertyOnce>] ``binding with type annotation is parser as such``
+let [<PropertyOnce>] ``binding with type annotation is parsed as such``
     () =
     parse [ T.Let; T.Identifier "foo"; T.Colon; T.Identifier "int"; T.Equals; T.QuotedString "hello" ] ==
         Ok (PBinding { name = "foo"; parameters = []; typeAnnotation = Some "int"; body = StrLit "hello" })
 
-let [<PropertyOnce>] ``binding with parameters is parser as such``
+let [<PropertyOnce>] ``binding with parameters is parsed as such``
     () =
     parse [
         T.Let
@@ -53,5 +53,30 @@ let [<PropertyOnce>] ``binding with parameters is parser as such``
                 parameters = [{ name = "x"; typeAnnotation = Some "int" }]
                 typeAnnotation = None
                 body = StrLit "hello"
+            }
+        )
+
+let [<PropertyOnce>] ``module is parsed as such``
+    () =
+    parse [
+        T.Module
+        T.Identifier "M"
+        T.Equals
+        T.Let
+        T.Identifier "foo"
+        T.Equals
+        T.Number (1u, None)
+    ] ==
+        Ok (
+            PModule {
+                name = "M"
+                members = [
+                    Value {
+                        name = "foo"
+                        parameters = []
+                        typeAnnotation = None
+                        body = NumLit (1u, None)
+                    }
+                ]
             }
         )

@@ -10,6 +10,7 @@ type Terminal =
     | T_eq
     | T_id of (string)
     | T_let
+    | T_module
     | T_numlit of (uint32 * uint32 option)
     | T_parenc
     | T_pareno
@@ -29,8 +30,13 @@ type Reducer = {
     ESIMP_numlit : (uint32 * uint32 option) -> Expr
     ESIMP_strlit : (string) -> Expr
     EXPR_EAPP : (Expr) -> Expr
+    MODMEMS_ : ModuleMember list
+    MODMEMS_MODMEMS_MODMEM : (ModuleMember list) * (ModuleMember) -> ModuleMember list
+    MODMEM_BIND : (Binding) -> ModuleMember
+    MODULE_module_id_eq_MODMEMS : (string) * (ModuleMember list) -> Module
     PROGRAM_BIND : (Binding) -> Program
     PROGRAM_EXPR : (Expr) -> Program
+    PROGRAM_MODULE : (Module) -> Program
     TYPEANNOT_ : TypeId option
     TYPEANNOT_colon_id : (string) -> TypeId option
 }
@@ -62,41 +68,62 @@ let parse (reducer : Reducer) (input : Terminal seq) : Result<Program, string> =
                 if inputEnumerator.MoveNext()
                 then lookahead <- inputEnumerator.Current
                 else lookaheadIsEof <- true
-                stateStack.Push(21)
+                stateStack.Push(22)
             | T_let ->
                 // shift
                 if inputEnumerator.MoveNext()
                 then lookahead <- inputEnumerator.Current
                 else lookaheadIsEof <- true
-                stateStack.Push(1)
+                stateStack.Push(2)
+            | T_module ->
+                // shift
+                if inputEnumerator.MoveNext()
+                then lookahead <- inputEnumerator.Current
+                else lookaheadIsEof <- true
+                stateStack.Push(28)
             | T_numlit x ->
                 // shift
                 lhsStack.Push(x)
                 if inputEnumerator.MoveNext()
                 then lookahead <- inputEnumerator.Current
                 else lookaheadIsEof <- true
-                stateStack.Push(22)
+                stateStack.Push(23)
             | T_pareno ->
                 // shift
                 if inputEnumerator.MoveNext()
                 then lookahead <- inputEnumerator.Current
                 else lookaheadIsEof <- true
-                stateStack.Push(17)
+                stateStack.Push(18)
             | T_strlit x ->
                 // shift
                 lhsStack.Push(x)
                 if inputEnumerator.MoveNext()
                 then lookahead <- inputEnumerator.Current
                 else lookaheadIsEof <- true
-                stateStack.Push(23)
+                stateStack.Push(24)
             | _ ->
                 // error
                 keepGoing <- false
         | 1 ->
             match lookahead with
-            | T_id x ->
+            | _ when lookaheadIsEof ->
+                // reduce
+                stateStack.Pop() |> ignore
+                stateStack.Pop() |> ignore
+                stateStack.Pop() |> ignore
+                stateStack.Pop() |> ignore
+                let arg2 = lhsStack.Pop() :?> ModuleMember list
+                let arg1 = lhsStack.Pop() :?> string
+                let reductionArgs = (arg1, arg2)
+                let reduced = reducer.MODULE_module_id_eq_MODMEMS reductionArgs
+                lhsStack.Push(reduced)
+                let nextState =
+                    match stateStack.Peek() with
+                    | 0 -> 32
+                    | _ -> failwithInvalidState ()
+                stateStack.Push(nextState)
+            | T_let ->
                 // shift
-                lhsStack.Push(x)
                 if inputEnumerator.MoveNext()
                 then lookahead <- inputEnumerator.Current
                 else lookaheadIsEof <- true
@@ -106,13 +133,25 @@ let parse (reducer : Reducer) (input : Terminal seq) : Result<Program, string> =
                 keepGoing <- false
         | 2 ->
             match lookahead with
+            | T_id x ->
+                // shift
+                lhsStack.Push(x)
+                if inputEnumerator.MoveNext()
+                then lookahead <- inputEnumerator.Current
+                else lookaheadIsEof <- true
+                stateStack.Push(3)
+            | _ ->
+                // error
+                keepGoing <- false
+        | 3 ->
+            match lookahead with
             | T_colon ->
                 // reduce
                 let reduced = reducer.BINDPARAMS_
                 lhsStack.Push(reduced)
                 let nextState =
                     match stateStack.Peek() with
-                    | 2 -> 3
+                    | 3 -> 4
                     | _ -> failwithInvalidState ()
                 stateStack.Push(nextState)
             | T_eq ->
@@ -121,7 +160,7 @@ let parse (reducer : Reducer) (input : Terminal seq) : Result<Program, string> =
                 lhsStack.Push(reduced)
                 let nextState =
                     match stateStack.Peek() with
-                    | 2 -> 3
+                    | 3 -> 4
                     | _ -> failwithInvalidState ()
                 stateStack.Push(nextState)
             | T_id _ ->
@@ -130,7 +169,7 @@ let parse (reducer : Reducer) (input : Terminal seq) : Result<Program, string> =
                 lhsStack.Push(reduced)
                 let nextState =
                     match stateStack.Peek() with
-                    | 2 -> 3
+                    | 3 -> 4
                     | _ -> failwithInvalidState ()
                 stateStack.Push(nextState)
             | T_pareno ->
@@ -139,27 +178,27 @@ let parse (reducer : Reducer) (input : Terminal seq) : Result<Program, string> =
                 lhsStack.Push(reduced)
                 let nextState =
                     match stateStack.Peek() with
-                    | 2 -> 3
+                    | 3 -> 4
                     | _ -> failwithInvalidState ()
                 stateStack.Push(nextState)
             | _ ->
                 // error
                 keepGoing <- false
-        | 3 ->
+        | 4 ->
             match lookahead with
             | T_colon ->
                 // shift
                 if inputEnumerator.MoveNext()
                 then lookahead <- inputEnumerator.Current
                 else lookaheadIsEof <- true
-                stateStack.Push(26)
+                stateStack.Push(33)
             | T_eq ->
                 // reduce
                 let reduced = reducer.TYPEANNOT_
                 lhsStack.Push(reduced)
                 let nextState =
                     match stateStack.Peek() with
-                    | 3 -> 4
+                    | 4 -> 5
                     | _ -> failwithInvalidState ()
                 stateStack.Push(nextState)
             | T_id x ->
@@ -168,28 +207,28 @@ let parse (reducer : Reducer) (input : Terminal seq) : Result<Program, string> =
                 if inputEnumerator.MoveNext()
                 then lookahead <- inputEnumerator.Current
                 else lookaheadIsEof <- true
-                stateStack.Push(7)
+                stateStack.Push(8)
             | T_pareno ->
                 // shift
                 if inputEnumerator.MoveNext()
                 then lookahead <- inputEnumerator.Current
                 else lookaheadIsEof <- true
-                stateStack.Push(8)
+                stateStack.Push(9)
             | _ ->
                 // error
                 keepGoing <- false
-        | 4 ->
+        | 5 ->
             match lookahead with
             | T_eq ->
                 // shift
                 if inputEnumerator.MoveNext()
                 then lookahead <- inputEnumerator.Current
                 else lookaheadIsEof <- true
-                stateStack.Push(5)
+                stateStack.Push(6)
             | _ ->
                 // error
                 keepGoing <- false
-        | 5 ->
+        | 6 ->
             match lookahead with
             | T_id x ->
                 // shift
@@ -197,31 +236,31 @@ let parse (reducer : Reducer) (input : Terminal seq) : Result<Program, string> =
                 if inputEnumerator.MoveNext()
                 then lookahead <- inputEnumerator.Current
                 else lookaheadIsEof <- true
-                stateStack.Push(21)
+                stateStack.Push(22)
             | T_numlit x ->
                 // shift
                 lhsStack.Push(x)
                 if inputEnumerator.MoveNext()
                 then lookahead <- inputEnumerator.Current
                 else lookaheadIsEof <- true
-                stateStack.Push(22)
+                stateStack.Push(23)
             | T_pareno ->
                 // shift
                 if inputEnumerator.MoveNext()
                 then lookahead <- inputEnumerator.Current
                 else lookaheadIsEof <- true
-                stateStack.Push(17)
+                stateStack.Push(18)
             | T_strlit x ->
                 // shift
                 lhsStack.Push(x)
                 if inputEnumerator.MoveNext()
                 then lookahead <- inputEnumerator.Current
                 else lookaheadIsEof <- true
-                stateStack.Push(23)
+                stateStack.Push(24)
             | _ ->
                 // error
                 keepGoing <- false
-        | 6 ->
+        | 7 ->
             match lookahead with
             | _ when lookaheadIsEof ->
                 // reduce
@@ -240,13 +279,35 @@ let parse (reducer : Reducer) (input : Terminal seq) : Result<Program, string> =
                 lhsStack.Push(reduced)
                 let nextState =
                     match stateStack.Peek() with
-                    | 0 -> 24
+                    | 0 -> 30
+                    | 1 -> 25
+                    | _ -> failwithInvalidState ()
+                stateStack.Push(nextState)
+            | T_let ->
+                // reduce
+                stateStack.Pop() |> ignore
+                stateStack.Pop() |> ignore
+                stateStack.Pop() |> ignore
+                stateStack.Pop() |> ignore
+                stateStack.Pop() |> ignore
+                stateStack.Pop() |> ignore
+                let arg4 = lhsStack.Pop() :?> Expr
+                let arg3 = lhsStack.Pop() :?> TypeId option
+                let arg2 = lhsStack.Pop() :?> BindingParameter list
+                let arg1 = lhsStack.Pop() :?> string
+                let reductionArgs = (arg1, arg2, arg3, arg4)
+                let reduced = reducer.BIND_let_id_BINDPARAMS_TYPEANNOT_eq_EXPR reductionArgs
+                lhsStack.Push(reduced)
+                let nextState =
+                    match stateStack.Peek() with
+                    | 0 -> 30
+                    | 1 -> 25
                     | _ -> failwithInvalidState ()
                 stateStack.Push(nextState)
             | _ ->
                 // error
                 keepGoing <- false
-        | 7 ->
+        | 8 ->
             match lookahead with
             | T_colon ->
                 // reduce
@@ -257,7 +318,7 @@ let parse (reducer : Reducer) (input : Terminal seq) : Result<Program, string> =
                 lhsStack.Push(reduced)
                 let nextState =
                     match stateStack.Peek() with
-                    | 3 -> 13
+                    | 4 -> 14
                     | _ -> failwithInvalidState ()
                 stateStack.Push(nextState)
             | T_eq ->
@@ -269,7 +330,7 @@ let parse (reducer : Reducer) (input : Terminal seq) : Result<Program, string> =
                 lhsStack.Push(reduced)
                 let nextState =
                     match stateStack.Peek() with
-                    | 3 -> 13
+                    | 4 -> 14
                     | _ -> failwithInvalidState ()
                 stateStack.Push(nextState)
             | T_id _ ->
@@ -281,7 +342,7 @@ let parse (reducer : Reducer) (input : Terminal seq) : Result<Program, string> =
                 lhsStack.Push(reduced)
                 let nextState =
                     match stateStack.Peek() with
-                    | 3 -> 13
+                    | 4 -> 14
                     | _ -> failwithInvalidState ()
                 stateStack.Push(nextState)
             | T_pareno ->
@@ -293,28 +354,17 @@ let parse (reducer : Reducer) (input : Terminal seq) : Result<Program, string> =
                 lhsStack.Push(reduced)
                 let nextState =
                     match stateStack.Peek() with
-                    | 3 -> 13
+                    | 4 -> 14
                     | _ -> failwithInvalidState ()
                 stateStack.Push(nextState)
             | _ ->
                 // error
                 keepGoing <- false
-        | 8 ->
+        | 9 ->
             match lookahead with
             | T_id x ->
                 // shift
                 lhsStack.Push(x)
-                if inputEnumerator.MoveNext()
-                then lookahead <- inputEnumerator.Current
-                else lookaheadIsEof <- true
-                stateStack.Push(9)
-            | _ ->
-                // error
-                keepGoing <- false
-        | 9 ->
-            match lookahead with
-            | T_colon ->
-                // shift
                 if inputEnumerator.MoveNext()
                 then lookahead <- inputEnumerator.Current
                 else lookaheadIsEof <- true
@@ -324,9 +374,8 @@ let parse (reducer : Reducer) (input : Terminal seq) : Result<Program, string> =
                 keepGoing <- false
         | 10 ->
             match lookahead with
-            | T_id x ->
+            | T_colon ->
                 // shift
-                lhsStack.Push(x)
                 if inputEnumerator.MoveNext()
                 then lookahead <- inputEnumerator.Current
                 else lookaheadIsEof <- true
@@ -336,8 +385,9 @@ let parse (reducer : Reducer) (input : Terminal seq) : Result<Program, string> =
                 keepGoing <- false
         | 11 ->
             match lookahead with
-            | T_parenc ->
+            | T_id x ->
                 // shift
+                lhsStack.Push(x)
                 if inputEnumerator.MoveNext()
                 then lookahead <- inputEnumerator.Current
                 else lookaheadIsEof <- true
@@ -347,6 +397,17 @@ let parse (reducer : Reducer) (input : Terminal seq) : Result<Program, string> =
                 keepGoing <- false
         | 12 ->
             match lookahead with
+            | T_parenc ->
+                // shift
+                if inputEnumerator.MoveNext()
+                then lookahead <- inputEnumerator.Current
+                else lookaheadIsEof <- true
+                stateStack.Push(13)
+            | _ ->
+                // error
+                keepGoing <- false
+        | 13 ->
+            match lookahead with
             | T_colon ->
                 // reduce
                 stateStack.Pop() |> ignore
@@ -361,7 +422,7 @@ let parse (reducer : Reducer) (input : Terminal seq) : Result<Program, string> =
                 lhsStack.Push(reduced)
                 let nextState =
                     match stateStack.Peek() with
-                    | 3 -> 13
+                    | 4 -> 14
                     | _ -> failwithInvalidState ()
                 stateStack.Push(nextState)
             | T_eq ->
@@ -378,7 +439,7 @@ let parse (reducer : Reducer) (input : Terminal seq) : Result<Program, string> =
                 lhsStack.Push(reduced)
                 let nextState =
                     match stateStack.Peek() with
-                    | 3 -> 13
+                    | 4 -> 14
                     | _ -> failwithInvalidState ()
                 stateStack.Push(nextState)
             | T_id _ ->
@@ -395,7 +456,7 @@ let parse (reducer : Reducer) (input : Terminal seq) : Result<Program, string> =
                 lhsStack.Push(reduced)
                 let nextState =
                     match stateStack.Peek() with
-                    | 3 -> 13
+                    | 4 -> 14
                     | _ -> failwithInvalidState ()
                 stateStack.Push(nextState)
             | T_pareno ->
@@ -412,13 +473,13 @@ let parse (reducer : Reducer) (input : Terminal seq) : Result<Program, string> =
                 lhsStack.Push(reduced)
                 let nextState =
                     match stateStack.Peek() with
-                    | 3 -> 13
+                    | 4 -> 14
                     | _ -> failwithInvalidState ()
                 stateStack.Push(nextState)
             | _ ->
                 // error
                 keepGoing <- false
-        | 13 ->
+        | 14 ->
             match lookahead with
             | T_colon ->
                 // reduce
@@ -431,7 +492,7 @@ let parse (reducer : Reducer) (input : Terminal seq) : Result<Program, string> =
                 lhsStack.Push(reduced)
                 let nextState =
                     match stateStack.Peek() with
-                    | 2 -> 3
+                    | 3 -> 4
                     | _ -> failwithInvalidState ()
                 stateStack.Push(nextState)
             | T_eq ->
@@ -445,7 +506,7 @@ let parse (reducer : Reducer) (input : Terminal seq) : Result<Program, string> =
                 lhsStack.Push(reduced)
                 let nextState =
                     match stateStack.Peek() with
-                    | 2 -> 3
+                    | 3 -> 4
                     | _ -> failwithInvalidState ()
                 stateStack.Push(nextState)
             | T_id _ ->
@@ -459,7 +520,7 @@ let parse (reducer : Reducer) (input : Terminal seq) : Result<Program, string> =
                 lhsStack.Push(reduced)
                 let nextState =
                     match stateStack.Peek() with
-                    | 2 -> 3
+                    | 3 -> 4
                     | _ -> failwithInvalidState ()
                 stateStack.Push(nextState)
             | T_pareno ->
@@ -473,13 +534,13 @@ let parse (reducer : Reducer) (input : Terminal seq) : Result<Program, string> =
                 lhsStack.Push(reduced)
                 let nextState =
                     match stateStack.Peek() with
-                    | 2 -> 3
+                    | 3 -> 4
                     | _ -> failwithInvalidState ()
                 stateStack.Push(nextState)
             | _ ->
                 // error
                 keepGoing <- false
-        | 14 ->
+        | 15 ->
             match lookahead with
             | _ when lookaheadIsEof ->
                 // reduce
@@ -490,8 +551,8 @@ let parse (reducer : Reducer) (input : Terminal seq) : Result<Program, string> =
                 lhsStack.Push(reduced)
                 let nextState =
                     match stateStack.Peek() with
-                    | 0 -> 25
-                    | 5 -> 6
+                    | 0 -> 31
+                    | 6 -> 7
                     | _ -> failwithInvalidState ()
                 stateStack.Push(nextState)
             | T_id x ->
@@ -500,107 +561,40 @@ let parse (reducer : Reducer) (input : Terminal seq) : Result<Program, string> =
                 if inputEnumerator.MoveNext()
                 then lookahead <- inputEnumerator.Current
                 else lookaheadIsEof <- true
-                stateStack.Push(21)
+                stateStack.Push(22)
+            | T_let ->
+                // reduce
+                stateStack.Pop() |> ignore
+                let arg1 = lhsStack.Pop() :?> Expr
+                let reductionArgs = (arg1)
+                let reduced = reducer.EXPR_EAPP reductionArgs
+                lhsStack.Push(reduced)
+                let nextState =
+                    match stateStack.Peek() with
+                    | 0 -> 31
+                    | 6 -> 7
+                    | _ -> failwithInvalidState ()
+                stateStack.Push(nextState)
             | T_numlit x ->
                 // shift
                 lhsStack.Push(x)
                 if inputEnumerator.MoveNext()
                 then lookahead <- inputEnumerator.Current
                 else lookaheadIsEof <- true
-                stateStack.Push(22)
+                stateStack.Push(23)
             | T_pareno ->
                 // shift
                 if inputEnumerator.MoveNext()
                 then lookahead <- inputEnumerator.Current
                 else lookaheadIsEof <- true
-                stateStack.Push(17)
+                stateStack.Push(18)
             | T_strlit x ->
                 // shift
                 lhsStack.Push(x)
                 if inputEnumerator.MoveNext()
                 then lookahead <- inputEnumerator.Current
                 else lookaheadIsEof <- true
-                stateStack.Push(23)
-            | _ ->
-                // error
-                keepGoing <- false
-        | 15 ->
-            match lookahead with
-            | _ when lookaheadIsEof ->
-                // reduce
-                stateStack.Pop() |> ignore
-                stateStack.Pop() |> ignore
-                let arg2 = lhsStack.Pop() :?> Expr
-                let arg1 = lhsStack.Pop() :?> Expr
-                let reductionArgs = (arg1, arg2)
-                let reduced = reducer.EAPP_EAPP_EPAREN reductionArgs
-                lhsStack.Push(reduced)
-                let nextState =
-                    match stateStack.Peek() with
-                    | 0 -> 14
-                    | 5 -> 14
-                    | _ -> failwithInvalidState ()
-                stateStack.Push(nextState)
-            | T_id _ ->
-                // reduce
-                stateStack.Pop() |> ignore
-                stateStack.Pop() |> ignore
-                let arg2 = lhsStack.Pop() :?> Expr
-                let arg1 = lhsStack.Pop() :?> Expr
-                let reductionArgs = (arg1, arg2)
-                let reduced = reducer.EAPP_EAPP_EPAREN reductionArgs
-                lhsStack.Push(reduced)
-                let nextState =
-                    match stateStack.Peek() with
-                    | 0 -> 14
-                    | 5 -> 14
-                    | _ -> failwithInvalidState ()
-                stateStack.Push(nextState)
-            | T_numlit _ ->
-                // reduce
-                stateStack.Pop() |> ignore
-                stateStack.Pop() |> ignore
-                let arg2 = lhsStack.Pop() :?> Expr
-                let arg1 = lhsStack.Pop() :?> Expr
-                let reductionArgs = (arg1, arg2)
-                let reduced = reducer.EAPP_EAPP_EPAREN reductionArgs
-                lhsStack.Push(reduced)
-                let nextState =
-                    match stateStack.Peek() with
-                    | 0 -> 14
-                    | 5 -> 14
-                    | _ -> failwithInvalidState ()
-                stateStack.Push(nextState)
-            | T_pareno ->
-                // reduce
-                stateStack.Pop() |> ignore
-                stateStack.Pop() |> ignore
-                let arg2 = lhsStack.Pop() :?> Expr
-                let arg1 = lhsStack.Pop() :?> Expr
-                let reductionArgs = (arg1, arg2)
-                let reduced = reducer.EAPP_EAPP_EPAREN reductionArgs
-                lhsStack.Push(reduced)
-                let nextState =
-                    match stateStack.Peek() with
-                    | 0 -> 14
-                    | 5 -> 14
-                    | _ -> failwithInvalidState ()
-                stateStack.Push(nextState)
-            | T_strlit _ ->
-                // reduce
-                stateStack.Pop() |> ignore
-                stateStack.Pop() |> ignore
-                let arg2 = lhsStack.Pop() :?> Expr
-                let arg1 = lhsStack.Pop() :?> Expr
-                let reductionArgs = (arg1, arg2)
-                let reduced = reducer.EAPP_EAPP_EPAREN reductionArgs
-                lhsStack.Push(reduced)
-                let nextState =
-                    match stateStack.Peek() with
-                    | 0 -> 14
-                    | 5 -> 14
-                    | _ -> failwithInvalidState ()
-                stateStack.Push(nextState)
+                stateStack.Push(24)
             | _ ->
                 // error
                 keepGoing <- false
@@ -609,66 +603,91 @@ let parse (reducer : Reducer) (input : Terminal seq) : Result<Program, string> =
             | _ when lookaheadIsEof ->
                 // reduce
                 stateStack.Pop() |> ignore
+                stateStack.Pop() |> ignore
+                let arg2 = lhsStack.Pop() :?> Expr
                 let arg1 = lhsStack.Pop() :?> Expr
-                let reductionArgs = (arg1)
-                let reduced = reducer.EAPP_EPAREN reductionArgs
+                let reductionArgs = (arg1, arg2)
+                let reduced = reducer.EAPP_EAPP_EPAREN reductionArgs
                 lhsStack.Push(reduced)
                 let nextState =
                     match stateStack.Peek() with
-                    | 0 -> 14
-                    | 5 -> 14
+                    | 0 -> 15
+                    | 6 -> 15
                     | _ -> failwithInvalidState ()
                 stateStack.Push(nextState)
             | T_id _ ->
                 // reduce
                 stateStack.Pop() |> ignore
+                stateStack.Pop() |> ignore
+                let arg2 = lhsStack.Pop() :?> Expr
                 let arg1 = lhsStack.Pop() :?> Expr
-                let reductionArgs = (arg1)
-                let reduced = reducer.EAPP_EPAREN reductionArgs
+                let reductionArgs = (arg1, arg2)
+                let reduced = reducer.EAPP_EAPP_EPAREN reductionArgs
                 lhsStack.Push(reduced)
                 let nextState =
                     match stateStack.Peek() with
-                    | 0 -> 14
-                    | 5 -> 14
+                    | 0 -> 15
+                    | 6 -> 15
+                    | _ -> failwithInvalidState ()
+                stateStack.Push(nextState)
+            | T_let ->
+                // reduce
+                stateStack.Pop() |> ignore
+                stateStack.Pop() |> ignore
+                let arg2 = lhsStack.Pop() :?> Expr
+                let arg1 = lhsStack.Pop() :?> Expr
+                let reductionArgs = (arg1, arg2)
+                let reduced = reducer.EAPP_EAPP_EPAREN reductionArgs
+                lhsStack.Push(reduced)
+                let nextState =
+                    match stateStack.Peek() with
+                    | 0 -> 15
+                    | 6 -> 15
                     | _ -> failwithInvalidState ()
                 stateStack.Push(nextState)
             | T_numlit _ ->
                 // reduce
                 stateStack.Pop() |> ignore
+                stateStack.Pop() |> ignore
+                let arg2 = lhsStack.Pop() :?> Expr
                 let arg1 = lhsStack.Pop() :?> Expr
-                let reductionArgs = (arg1)
-                let reduced = reducer.EAPP_EPAREN reductionArgs
+                let reductionArgs = (arg1, arg2)
+                let reduced = reducer.EAPP_EAPP_EPAREN reductionArgs
                 lhsStack.Push(reduced)
                 let nextState =
                     match stateStack.Peek() with
-                    | 0 -> 14
-                    | 5 -> 14
+                    | 0 -> 15
+                    | 6 -> 15
                     | _ -> failwithInvalidState ()
                 stateStack.Push(nextState)
             | T_pareno ->
                 // reduce
                 stateStack.Pop() |> ignore
+                stateStack.Pop() |> ignore
+                let arg2 = lhsStack.Pop() :?> Expr
                 let arg1 = lhsStack.Pop() :?> Expr
-                let reductionArgs = (arg1)
-                let reduced = reducer.EAPP_EPAREN reductionArgs
+                let reductionArgs = (arg1, arg2)
+                let reduced = reducer.EAPP_EAPP_EPAREN reductionArgs
                 lhsStack.Push(reduced)
                 let nextState =
                     match stateStack.Peek() with
-                    | 0 -> 14
-                    | 5 -> 14
+                    | 0 -> 15
+                    | 6 -> 15
                     | _ -> failwithInvalidState ()
                 stateStack.Push(nextState)
             | T_strlit _ ->
                 // reduce
                 stateStack.Pop() |> ignore
+                stateStack.Pop() |> ignore
+                let arg2 = lhsStack.Pop() :?> Expr
                 let arg1 = lhsStack.Pop() :?> Expr
-                let reductionArgs = (arg1)
-                let reduced = reducer.EAPP_EPAREN reductionArgs
+                let reductionArgs = (arg1, arg2)
+                let reduced = reducer.EAPP_EAPP_EPAREN reductionArgs
                 lhsStack.Push(reduced)
                 let nextState =
                     match stateStack.Peek() with
-                    | 0 -> 14
-                    | 5 -> 14
+                    | 0 -> 15
+                    | 6 -> 15
                     | _ -> failwithInvalidState ()
                 stateStack.Push(nextState)
             | _ ->
@@ -676,37 +695,120 @@ let parse (reducer : Reducer) (input : Terminal seq) : Result<Program, string> =
                 keepGoing <- false
         | 17 ->
             match lookahead with
+            | _ when lookaheadIsEof ->
+                // reduce
+                stateStack.Pop() |> ignore
+                let arg1 = lhsStack.Pop() :?> Expr
+                let reductionArgs = (arg1)
+                let reduced = reducer.EAPP_EPAREN reductionArgs
+                lhsStack.Push(reduced)
+                let nextState =
+                    match stateStack.Peek() with
+                    | 0 -> 15
+                    | 6 -> 15
+                    | _ -> failwithInvalidState ()
+                stateStack.Push(nextState)
+            | T_id _ ->
+                // reduce
+                stateStack.Pop() |> ignore
+                let arg1 = lhsStack.Pop() :?> Expr
+                let reductionArgs = (arg1)
+                let reduced = reducer.EAPP_EPAREN reductionArgs
+                lhsStack.Push(reduced)
+                let nextState =
+                    match stateStack.Peek() with
+                    | 0 -> 15
+                    | 6 -> 15
+                    | _ -> failwithInvalidState ()
+                stateStack.Push(nextState)
+            | T_let ->
+                // reduce
+                stateStack.Pop() |> ignore
+                let arg1 = lhsStack.Pop() :?> Expr
+                let reductionArgs = (arg1)
+                let reduced = reducer.EAPP_EPAREN reductionArgs
+                lhsStack.Push(reduced)
+                let nextState =
+                    match stateStack.Peek() with
+                    | 0 -> 15
+                    | 6 -> 15
+                    | _ -> failwithInvalidState ()
+                stateStack.Push(nextState)
+            | T_numlit _ ->
+                // reduce
+                stateStack.Pop() |> ignore
+                let arg1 = lhsStack.Pop() :?> Expr
+                let reductionArgs = (arg1)
+                let reduced = reducer.EAPP_EPAREN reductionArgs
+                lhsStack.Push(reduced)
+                let nextState =
+                    match stateStack.Peek() with
+                    | 0 -> 15
+                    | 6 -> 15
+                    | _ -> failwithInvalidState ()
+                stateStack.Push(nextState)
+            | T_pareno ->
+                // reduce
+                stateStack.Pop() |> ignore
+                let arg1 = lhsStack.Pop() :?> Expr
+                let reductionArgs = (arg1)
+                let reduced = reducer.EAPP_EPAREN reductionArgs
+                lhsStack.Push(reduced)
+                let nextState =
+                    match stateStack.Peek() with
+                    | 0 -> 15
+                    | 6 -> 15
+                    | _ -> failwithInvalidState ()
+                stateStack.Push(nextState)
+            | T_strlit _ ->
+                // reduce
+                stateStack.Pop() |> ignore
+                let arg1 = lhsStack.Pop() :?> Expr
+                let reductionArgs = (arg1)
+                let reduced = reducer.EAPP_EPAREN reductionArgs
+                lhsStack.Push(reduced)
+                let nextState =
+                    match stateStack.Peek() with
+                    | 0 -> 15
+                    | 6 -> 15
+                    | _ -> failwithInvalidState ()
+                stateStack.Push(nextState)
+            | _ ->
+                // error
+                keepGoing <- false
+        | 18 ->
+            match lookahead with
             | T_id x ->
                 // shift
                 lhsStack.Push(x)
                 if inputEnumerator.MoveNext()
                 then lookahead <- inputEnumerator.Current
                 else lookaheadIsEof <- true
-                stateStack.Push(21)
+                stateStack.Push(22)
             | T_numlit x ->
                 // shift
                 lhsStack.Push(x)
                 if inputEnumerator.MoveNext()
                 then lookahead <- inputEnumerator.Current
                 else lookaheadIsEof <- true
-                stateStack.Push(22)
+                stateStack.Push(23)
             | T_pareno ->
                 // shift
                 if inputEnumerator.MoveNext()
                 then lookahead <- inputEnumerator.Current
                 else lookaheadIsEof <- true
-                stateStack.Push(17)
+                stateStack.Push(18)
             | T_strlit x ->
                 // shift
                 lhsStack.Push(x)
                 if inputEnumerator.MoveNext()
                 then lookahead <- inputEnumerator.Current
                 else lookaheadIsEof <- true
-                stateStack.Push(23)
+                stateStack.Push(24)
             | _ ->
                 // error
                 keepGoing <- false
-        | 18 ->
+        | 19 ->
             match lookahead with
             | _ when lookaheadIsEof ->
                 // reduce
@@ -717,10 +819,10 @@ let parse (reducer : Reducer) (input : Terminal seq) : Result<Program, string> =
                 lhsStack.Push(reduced)
                 let nextState =
                     match stateStack.Peek() with
-                    | 0 -> 16
-                    | 5 -> 16
-                    | 14 -> 15
-                    | 17 -> 19
+                    | 0 -> 17
+                    | 6 -> 17
+                    | 15 -> 16
+                    | 18 -> 20
                     | _ -> failwithInvalidState ()
                 stateStack.Push(nextState)
             | T_id _ ->
@@ -732,10 +834,25 @@ let parse (reducer : Reducer) (input : Terminal seq) : Result<Program, string> =
                 lhsStack.Push(reduced)
                 let nextState =
                     match stateStack.Peek() with
-                    | 0 -> 16
-                    | 5 -> 16
-                    | 14 -> 15
-                    | 17 -> 19
+                    | 0 -> 17
+                    | 6 -> 17
+                    | 15 -> 16
+                    | 18 -> 20
+                    | _ -> failwithInvalidState ()
+                stateStack.Push(nextState)
+            | T_let ->
+                // reduce
+                stateStack.Pop() |> ignore
+                let arg1 = lhsStack.Pop() :?> Expr
+                let reductionArgs = (arg1)
+                let reduced = reducer.EPAREN_ESIMP reductionArgs
+                lhsStack.Push(reduced)
+                let nextState =
+                    match stateStack.Peek() with
+                    | 0 -> 17
+                    | 6 -> 17
+                    | 15 -> 16
+                    | 18 -> 20
                     | _ -> failwithInvalidState ()
                 stateStack.Push(nextState)
             | T_numlit _ ->
@@ -747,10 +864,10 @@ let parse (reducer : Reducer) (input : Terminal seq) : Result<Program, string> =
                 lhsStack.Push(reduced)
                 let nextState =
                     match stateStack.Peek() with
-                    | 0 -> 16
-                    | 5 -> 16
-                    | 14 -> 15
-                    | 17 -> 19
+                    | 0 -> 17
+                    | 6 -> 17
+                    | 15 -> 16
+                    | 18 -> 20
                     | _ -> failwithInvalidState ()
                 stateStack.Push(nextState)
             | T_parenc ->
@@ -762,10 +879,10 @@ let parse (reducer : Reducer) (input : Terminal seq) : Result<Program, string> =
                 lhsStack.Push(reduced)
                 let nextState =
                     match stateStack.Peek() with
-                    | 0 -> 16
-                    | 5 -> 16
-                    | 14 -> 15
-                    | 17 -> 19
+                    | 0 -> 17
+                    | 6 -> 17
+                    | 15 -> 16
+                    | 18 -> 20
                     | _ -> failwithInvalidState ()
                 stateStack.Push(nextState)
             | T_pareno ->
@@ -777,10 +894,10 @@ let parse (reducer : Reducer) (input : Terminal seq) : Result<Program, string> =
                 lhsStack.Push(reduced)
                 let nextState =
                     match stateStack.Peek() with
-                    | 0 -> 16
-                    | 5 -> 16
-                    | 14 -> 15
-                    | 17 -> 19
+                    | 0 -> 17
+                    | 6 -> 17
+                    | 15 -> 16
+                    | 18 -> 20
                     | _ -> failwithInvalidState ()
                 stateStack.Push(nextState)
             | T_strlit _ ->
@@ -792,130 +909,23 @@ let parse (reducer : Reducer) (input : Terminal seq) : Result<Program, string> =
                 lhsStack.Push(reduced)
                 let nextState =
                     match stateStack.Peek() with
-                    | 0 -> 16
-                    | 5 -> 16
-                    | 14 -> 15
-                    | 17 -> 19
+                    | 0 -> 17
+                    | 6 -> 17
+                    | 15 -> 16
+                    | 18 -> 20
                     | _ -> failwithInvalidState ()
                 stateStack.Push(nextState)
             | _ ->
                 // error
                 keepGoing <- false
-        | 19 ->
+        | 20 ->
             match lookahead with
             | T_parenc ->
                 // shift
                 if inputEnumerator.MoveNext()
                 then lookahead <- inputEnumerator.Current
                 else lookaheadIsEof <- true
-                stateStack.Push(20)
-            | _ ->
-                // error
-                keepGoing <- false
-        | 20 ->
-            match lookahead with
-            | _ when lookaheadIsEof ->
-                // reduce
-                stateStack.Pop() |> ignore
-                stateStack.Pop() |> ignore
-                stateStack.Pop() |> ignore
-                let arg1 = lhsStack.Pop() :?> Expr
-                let reductionArgs = (arg1)
-                let reduced = reducer.EPAREN_pareno_EPAREN_parenc reductionArgs
-                lhsStack.Push(reduced)
-                let nextState =
-                    match stateStack.Peek() with
-                    | 0 -> 16
-                    | 5 -> 16
-                    | 14 -> 15
-                    | 17 -> 19
-                    | _ -> failwithInvalidState ()
-                stateStack.Push(nextState)
-            | T_id _ ->
-                // reduce
-                stateStack.Pop() |> ignore
-                stateStack.Pop() |> ignore
-                stateStack.Pop() |> ignore
-                let arg1 = lhsStack.Pop() :?> Expr
-                let reductionArgs = (arg1)
-                let reduced = reducer.EPAREN_pareno_EPAREN_parenc reductionArgs
-                lhsStack.Push(reduced)
-                let nextState =
-                    match stateStack.Peek() with
-                    | 0 -> 16
-                    | 5 -> 16
-                    | 14 -> 15
-                    | 17 -> 19
-                    | _ -> failwithInvalidState ()
-                stateStack.Push(nextState)
-            | T_numlit _ ->
-                // reduce
-                stateStack.Pop() |> ignore
-                stateStack.Pop() |> ignore
-                stateStack.Pop() |> ignore
-                let arg1 = lhsStack.Pop() :?> Expr
-                let reductionArgs = (arg1)
-                let reduced = reducer.EPAREN_pareno_EPAREN_parenc reductionArgs
-                lhsStack.Push(reduced)
-                let nextState =
-                    match stateStack.Peek() with
-                    | 0 -> 16
-                    | 5 -> 16
-                    | 14 -> 15
-                    | 17 -> 19
-                    | _ -> failwithInvalidState ()
-                stateStack.Push(nextState)
-            | T_parenc ->
-                // reduce
-                stateStack.Pop() |> ignore
-                stateStack.Pop() |> ignore
-                stateStack.Pop() |> ignore
-                let arg1 = lhsStack.Pop() :?> Expr
-                let reductionArgs = (arg1)
-                let reduced = reducer.EPAREN_pareno_EPAREN_parenc reductionArgs
-                lhsStack.Push(reduced)
-                let nextState =
-                    match stateStack.Peek() with
-                    | 0 -> 16
-                    | 5 -> 16
-                    | 14 -> 15
-                    | 17 -> 19
-                    | _ -> failwithInvalidState ()
-                stateStack.Push(nextState)
-            | T_pareno ->
-                // reduce
-                stateStack.Pop() |> ignore
-                stateStack.Pop() |> ignore
-                stateStack.Pop() |> ignore
-                let arg1 = lhsStack.Pop() :?> Expr
-                let reductionArgs = (arg1)
-                let reduced = reducer.EPAREN_pareno_EPAREN_parenc reductionArgs
-                lhsStack.Push(reduced)
-                let nextState =
-                    match stateStack.Peek() with
-                    | 0 -> 16
-                    | 5 -> 16
-                    | 14 -> 15
-                    | 17 -> 19
-                    | _ -> failwithInvalidState ()
-                stateStack.Push(nextState)
-            | T_strlit _ ->
-                // reduce
-                stateStack.Pop() |> ignore
-                stateStack.Pop() |> ignore
-                stateStack.Pop() |> ignore
-                let arg1 = lhsStack.Pop() :?> Expr
-                let reductionArgs = (arg1)
-                let reduced = reducer.EPAREN_pareno_EPAREN_parenc reductionArgs
-                lhsStack.Push(reduced)
-                let nextState =
-                    match stateStack.Peek() with
-                    | 0 -> 16
-                    | 5 -> 16
-                    | 14 -> 15
-                    | 17 -> 19
-                    | _ -> failwithInvalidState ()
-                stateStack.Push(nextState)
+                stateStack.Push(21)
             | _ ->
                 // error
                 keepGoing <- false
@@ -924,91 +934,120 @@ let parse (reducer : Reducer) (input : Terminal seq) : Result<Program, string> =
             | _ when lookaheadIsEof ->
                 // reduce
                 stateStack.Pop() |> ignore
-                let arg1 = lhsStack.Pop() :?> string
+                stateStack.Pop() |> ignore
+                stateStack.Pop() |> ignore
+                let arg1 = lhsStack.Pop() :?> Expr
                 let reductionArgs = (arg1)
-                let reduced = reducer.ESIMP_id reductionArgs
+                let reduced = reducer.EPAREN_pareno_EPAREN_parenc reductionArgs
                 lhsStack.Push(reduced)
                 let nextState =
                     match stateStack.Peek() with
-                    | 0 -> 18
-                    | 5 -> 18
-                    | 14 -> 18
-                    | 17 -> 18
+                    | 0 -> 17
+                    | 6 -> 17
+                    | 15 -> 16
+                    | 18 -> 20
                     | _ -> failwithInvalidState ()
                 stateStack.Push(nextState)
             | T_id _ ->
                 // reduce
                 stateStack.Pop() |> ignore
-                let arg1 = lhsStack.Pop() :?> string
+                stateStack.Pop() |> ignore
+                stateStack.Pop() |> ignore
+                let arg1 = lhsStack.Pop() :?> Expr
                 let reductionArgs = (arg1)
-                let reduced = reducer.ESIMP_id reductionArgs
+                let reduced = reducer.EPAREN_pareno_EPAREN_parenc reductionArgs
                 lhsStack.Push(reduced)
                 let nextState =
                     match stateStack.Peek() with
-                    | 0 -> 18
-                    | 5 -> 18
-                    | 14 -> 18
-                    | 17 -> 18
+                    | 0 -> 17
+                    | 6 -> 17
+                    | 15 -> 16
+                    | 18 -> 20
+                    | _ -> failwithInvalidState ()
+                stateStack.Push(nextState)
+            | T_let ->
+                // reduce
+                stateStack.Pop() |> ignore
+                stateStack.Pop() |> ignore
+                stateStack.Pop() |> ignore
+                let arg1 = lhsStack.Pop() :?> Expr
+                let reductionArgs = (arg1)
+                let reduced = reducer.EPAREN_pareno_EPAREN_parenc reductionArgs
+                lhsStack.Push(reduced)
+                let nextState =
+                    match stateStack.Peek() with
+                    | 0 -> 17
+                    | 6 -> 17
+                    | 15 -> 16
+                    | 18 -> 20
                     | _ -> failwithInvalidState ()
                 stateStack.Push(nextState)
             | T_numlit _ ->
                 // reduce
                 stateStack.Pop() |> ignore
-                let arg1 = lhsStack.Pop() :?> string
+                stateStack.Pop() |> ignore
+                stateStack.Pop() |> ignore
+                let arg1 = lhsStack.Pop() :?> Expr
                 let reductionArgs = (arg1)
-                let reduced = reducer.ESIMP_id reductionArgs
+                let reduced = reducer.EPAREN_pareno_EPAREN_parenc reductionArgs
                 lhsStack.Push(reduced)
                 let nextState =
                     match stateStack.Peek() with
-                    | 0 -> 18
-                    | 5 -> 18
-                    | 14 -> 18
-                    | 17 -> 18
+                    | 0 -> 17
+                    | 6 -> 17
+                    | 15 -> 16
+                    | 18 -> 20
                     | _ -> failwithInvalidState ()
                 stateStack.Push(nextState)
             | T_parenc ->
                 // reduce
                 stateStack.Pop() |> ignore
-                let arg1 = lhsStack.Pop() :?> string
+                stateStack.Pop() |> ignore
+                stateStack.Pop() |> ignore
+                let arg1 = lhsStack.Pop() :?> Expr
                 let reductionArgs = (arg1)
-                let reduced = reducer.ESIMP_id reductionArgs
+                let reduced = reducer.EPAREN_pareno_EPAREN_parenc reductionArgs
                 lhsStack.Push(reduced)
                 let nextState =
                     match stateStack.Peek() with
-                    | 0 -> 18
-                    | 5 -> 18
-                    | 14 -> 18
-                    | 17 -> 18
+                    | 0 -> 17
+                    | 6 -> 17
+                    | 15 -> 16
+                    | 18 -> 20
                     | _ -> failwithInvalidState ()
                 stateStack.Push(nextState)
             | T_pareno ->
                 // reduce
                 stateStack.Pop() |> ignore
-                let arg1 = lhsStack.Pop() :?> string
+                stateStack.Pop() |> ignore
+                stateStack.Pop() |> ignore
+                let arg1 = lhsStack.Pop() :?> Expr
                 let reductionArgs = (arg1)
-                let reduced = reducer.ESIMP_id reductionArgs
+                let reduced = reducer.EPAREN_pareno_EPAREN_parenc reductionArgs
                 lhsStack.Push(reduced)
                 let nextState =
                     match stateStack.Peek() with
-                    | 0 -> 18
-                    | 5 -> 18
-                    | 14 -> 18
-                    | 17 -> 18
+                    | 0 -> 17
+                    | 6 -> 17
+                    | 15 -> 16
+                    | 18 -> 20
                     | _ -> failwithInvalidState ()
                 stateStack.Push(nextState)
             | T_strlit _ ->
                 // reduce
                 stateStack.Pop() |> ignore
-                let arg1 = lhsStack.Pop() :?> string
+                stateStack.Pop() |> ignore
+                stateStack.Pop() |> ignore
+                let arg1 = lhsStack.Pop() :?> Expr
                 let reductionArgs = (arg1)
-                let reduced = reducer.ESIMP_id reductionArgs
+                let reduced = reducer.EPAREN_pareno_EPAREN_parenc reductionArgs
                 lhsStack.Push(reduced)
                 let nextState =
                     match stateStack.Peek() with
-                    | 0 -> 18
-                    | 5 -> 18
-                    | 14 -> 18
-                    | 17 -> 18
+                    | 0 -> 17
+                    | 6 -> 17
+                    | 15 -> 16
+                    | 18 -> 20
                     | _ -> failwithInvalidState ()
                 stateStack.Push(nextState)
             | _ ->
@@ -1019,91 +1058,106 @@ let parse (reducer : Reducer) (input : Terminal seq) : Result<Program, string> =
             | _ when lookaheadIsEof ->
                 // reduce
                 stateStack.Pop() |> ignore
-                let arg1 = lhsStack.Pop() :?> uint32 * uint32 option
+                let arg1 = lhsStack.Pop() :?> string
                 let reductionArgs = (arg1)
-                let reduced = reducer.ESIMP_numlit reductionArgs
+                let reduced = reducer.ESIMP_id reductionArgs
                 lhsStack.Push(reduced)
                 let nextState =
                     match stateStack.Peek() with
-                    | 0 -> 18
-                    | 5 -> 18
-                    | 14 -> 18
-                    | 17 -> 18
+                    | 0 -> 19
+                    | 6 -> 19
+                    | 15 -> 19
+                    | 18 -> 19
                     | _ -> failwithInvalidState ()
                 stateStack.Push(nextState)
             | T_id _ ->
                 // reduce
                 stateStack.Pop() |> ignore
-                let arg1 = lhsStack.Pop() :?> uint32 * uint32 option
+                let arg1 = lhsStack.Pop() :?> string
                 let reductionArgs = (arg1)
-                let reduced = reducer.ESIMP_numlit reductionArgs
+                let reduced = reducer.ESIMP_id reductionArgs
                 lhsStack.Push(reduced)
                 let nextState =
                     match stateStack.Peek() with
-                    | 0 -> 18
-                    | 5 -> 18
-                    | 14 -> 18
-                    | 17 -> 18
+                    | 0 -> 19
+                    | 6 -> 19
+                    | 15 -> 19
+                    | 18 -> 19
+                    | _ -> failwithInvalidState ()
+                stateStack.Push(nextState)
+            | T_let ->
+                // reduce
+                stateStack.Pop() |> ignore
+                let arg1 = lhsStack.Pop() :?> string
+                let reductionArgs = (arg1)
+                let reduced = reducer.ESIMP_id reductionArgs
+                lhsStack.Push(reduced)
+                let nextState =
+                    match stateStack.Peek() with
+                    | 0 -> 19
+                    | 6 -> 19
+                    | 15 -> 19
+                    | 18 -> 19
                     | _ -> failwithInvalidState ()
                 stateStack.Push(nextState)
             | T_numlit _ ->
                 // reduce
                 stateStack.Pop() |> ignore
-                let arg1 = lhsStack.Pop() :?> uint32 * uint32 option
+                let arg1 = lhsStack.Pop() :?> string
                 let reductionArgs = (arg1)
-                let reduced = reducer.ESIMP_numlit reductionArgs
+                let reduced = reducer.ESIMP_id reductionArgs
                 lhsStack.Push(reduced)
                 let nextState =
                     match stateStack.Peek() with
-                    | 0 -> 18
-                    | 5 -> 18
-                    | 14 -> 18
-                    | 17 -> 18
+                    | 0 -> 19
+                    | 6 -> 19
+                    | 15 -> 19
+                    | 18 -> 19
                     | _ -> failwithInvalidState ()
                 stateStack.Push(nextState)
             | T_parenc ->
                 // reduce
                 stateStack.Pop() |> ignore
-                let arg1 = lhsStack.Pop() :?> uint32 * uint32 option
+                let arg1 = lhsStack.Pop() :?> string
                 let reductionArgs = (arg1)
-                let reduced = reducer.ESIMP_numlit reductionArgs
+                let reduced = reducer.ESIMP_id reductionArgs
                 lhsStack.Push(reduced)
                 let nextState =
                     match stateStack.Peek() with
-                    | 0 -> 18
-                    | 5 -> 18
-                    | 14 -> 18
-                    | 17 -> 18
+                    | 0 -> 19
+                    | 6 -> 19
+                    | 15 -> 19
+                    | 18 -> 19
                     | _ -> failwithInvalidState ()
                 stateStack.Push(nextState)
             | T_pareno ->
                 // reduce
                 stateStack.Pop() |> ignore
-                let arg1 = lhsStack.Pop() :?> uint32 * uint32 option
+                let arg1 = lhsStack.Pop() :?> string
                 let reductionArgs = (arg1)
-                let reduced = reducer.ESIMP_numlit reductionArgs
+                let reduced = reducer.ESIMP_id reductionArgs
                 lhsStack.Push(reduced)
                 let nextState =
                     match stateStack.Peek() with
-                    | 0 -> 18
-                    | 5 -> 18
-                    | 14 -> 18
-                    | 17 -> 18
+                    | 0 -> 19
+                    | 6 -> 19
+                    | 15 -> 19
+                    | 18 -> 19
                     | _ -> failwithInvalidState ()
                 stateStack.Push(nextState)
             | T_strlit _ ->
                 // reduce
                 stateStack.Pop() |> ignore
-                let arg1 = lhsStack.Pop() :?> uint32 * uint32 option
+                let arg1 = lhsStack.Pop() :?> string
                 let reductionArgs = (arg1)
-                let reduced = reducer.ESIMP_numlit reductionArgs
+                let reduced = reducer.ESIMP_id reductionArgs
                 lhsStack.Push(reduced)
                 let nextState =
                     match stateStack.Peek() with
-                    | 0 -> 18
-                    | 5 -> 18
-                    | 14 -> 18
-                    | 17 -> 18
+                    | 0 -> 19
+                    | 6 -> 19
+                    | 15 -> 19
+                    | 18 -> 19
                     | _ -> failwithInvalidState ()
                 stateStack.Push(nextState)
             | _ ->
@@ -1114,16 +1168,126 @@ let parse (reducer : Reducer) (input : Terminal seq) : Result<Program, string> =
             | _ when lookaheadIsEof ->
                 // reduce
                 stateStack.Pop() |> ignore
+                let arg1 = lhsStack.Pop() :?> uint32 * uint32 option
+                let reductionArgs = (arg1)
+                let reduced = reducer.ESIMP_numlit reductionArgs
+                lhsStack.Push(reduced)
+                let nextState =
+                    match stateStack.Peek() with
+                    | 0 -> 19
+                    | 6 -> 19
+                    | 15 -> 19
+                    | 18 -> 19
+                    | _ -> failwithInvalidState ()
+                stateStack.Push(nextState)
+            | T_id _ ->
+                // reduce
+                stateStack.Pop() |> ignore
+                let arg1 = lhsStack.Pop() :?> uint32 * uint32 option
+                let reductionArgs = (arg1)
+                let reduced = reducer.ESIMP_numlit reductionArgs
+                lhsStack.Push(reduced)
+                let nextState =
+                    match stateStack.Peek() with
+                    | 0 -> 19
+                    | 6 -> 19
+                    | 15 -> 19
+                    | 18 -> 19
+                    | _ -> failwithInvalidState ()
+                stateStack.Push(nextState)
+            | T_let ->
+                // reduce
+                stateStack.Pop() |> ignore
+                let arg1 = lhsStack.Pop() :?> uint32 * uint32 option
+                let reductionArgs = (arg1)
+                let reduced = reducer.ESIMP_numlit reductionArgs
+                lhsStack.Push(reduced)
+                let nextState =
+                    match stateStack.Peek() with
+                    | 0 -> 19
+                    | 6 -> 19
+                    | 15 -> 19
+                    | 18 -> 19
+                    | _ -> failwithInvalidState ()
+                stateStack.Push(nextState)
+            | T_numlit _ ->
+                // reduce
+                stateStack.Pop() |> ignore
+                let arg1 = lhsStack.Pop() :?> uint32 * uint32 option
+                let reductionArgs = (arg1)
+                let reduced = reducer.ESIMP_numlit reductionArgs
+                lhsStack.Push(reduced)
+                let nextState =
+                    match stateStack.Peek() with
+                    | 0 -> 19
+                    | 6 -> 19
+                    | 15 -> 19
+                    | 18 -> 19
+                    | _ -> failwithInvalidState ()
+                stateStack.Push(nextState)
+            | T_parenc ->
+                // reduce
+                stateStack.Pop() |> ignore
+                let arg1 = lhsStack.Pop() :?> uint32 * uint32 option
+                let reductionArgs = (arg1)
+                let reduced = reducer.ESIMP_numlit reductionArgs
+                lhsStack.Push(reduced)
+                let nextState =
+                    match stateStack.Peek() with
+                    | 0 -> 19
+                    | 6 -> 19
+                    | 15 -> 19
+                    | 18 -> 19
+                    | _ -> failwithInvalidState ()
+                stateStack.Push(nextState)
+            | T_pareno ->
+                // reduce
+                stateStack.Pop() |> ignore
+                let arg1 = lhsStack.Pop() :?> uint32 * uint32 option
+                let reductionArgs = (arg1)
+                let reduced = reducer.ESIMP_numlit reductionArgs
+                lhsStack.Push(reduced)
+                let nextState =
+                    match stateStack.Peek() with
+                    | 0 -> 19
+                    | 6 -> 19
+                    | 15 -> 19
+                    | 18 -> 19
+                    | _ -> failwithInvalidState ()
+                stateStack.Push(nextState)
+            | T_strlit _ ->
+                // reduce
+                stateStack.Pop() |> ignore
+                let arg1 = lhsStack.Pop() :?> uint32 * uint32 option
+                let reductionArgs = (arg1)
+                let reduced = reducer.ESIMP_numlit reductionArgs
+                lhsStack.Push(reduced)
+                let nextState =
+                    match stateStack.Peek() with
+                    | 0 -> 19
+                    | 6 -> 19
+                    | 15 -> 19
+                    | 18 -> 19
+                    | _ -> failwithInvalidState ()
+                stateStack.Push(nextState)
+            | _ ->
+                // error
+                keepGoing <- false
+        | 24 ->
+            match lookahead with
+            | _ when lookaheadIsEof ->
+                // reduce
+                stateStack.Pop() |> ignore
                 let arg1 = lhsStack.Pop() :?> string
                 let reductionArgs = (arg1)
                 let reduced = reducer.ESIMP_strlit reductionArgs
                 lhsStack.Push(reduced)
                 let nextState =
                     match stateStack.Peek() with
-                    | 0 -> 18
-                    | 5 -> 18
-                    | 14 -> 18
-                    | 17 -> 18
+                    | 0 -> 19
+                    | 6 -> 19
+                    | 15 -> 19
+                    | 18 -> 19
                     | _ -> failwithInvalidState ()
                 stateStack.Push(nextState)
             | T_id _ ->
@@ -1135,10 +1299,25 @@ let parse (reducer : Reducer) (input : Terminal seq) : Result<Program, string> =
                 lhsStack.Push(reduced)
                 let nextState =
                     match stateStack.Peek() with
-                    | 0 -> 18
-                    | 5 -> 18
-                    | 14 -> 18
-                    | 17 -> 18
+                    | 0 -> 19
+                    | 6 -> 19
+                    | 15 -> 19
+                    | 18 -> 19
+                    | _ -> failwithInvalidState ()
+                stateStack.Push(nextState)
+            | T_let ->
+                // reduce
+                stateStack.Pop() |> ignore
+                let arg1 = lhsStack.Pop() :?> string
+                let reductionArgs = (arg1)
+                let reduced = reducer.ESIMP_strlit reductionArgs
+                lhsStack.Push(reduced)
+                let nextState =
+                    match stateStack.Peek() with
+                    | 0 -> 19
+                    | 6 -> 19
+                    | 15 -> 19
+                    | 18 -> 19
                     | _ -> failwithInvalidState ()
                 stateStack.Push(nextState)
             | T_numlit _ ->
@@ -1150,10 +1329,10 @@ let parse (reducer : Reducer) (input : Terminal seq) : Result<Program, string> =
                 lhsStack.Push(reduced)
                 let nextState =
                     match stateStack.Peek() with
-                    | 0 -> 18
-                    | 5 -> 18
-                    | 14 -> 18
-                    | 17 -> 18
+                    | 0 -> 19
+                    | 6 -> 19
+                    | 15 -> 19
+                    | 18 -> 19
                     | _ -> failwithInvalidState ()
                 stateStack.Push(nextState)
             | T_parenc ->
@@ -1165,10 +1344,10 @@ let parse (reducer : Reducer) (input : Terminal seq) : Result<Program, string> =
                 lhsStack.Push(reduced)
                 let nextState =
                     match stateStack.Peek() with
-                    | 0 -> 18
-                    | 5 -> 18
-                    | 14 -> 18
-                    | 17 -> 18
+                    | 0 -> 19
+                    | 6 -> 19
+                    | 15 -> 19
+                    | 18 -> 19
                     | _ -> failwithInvalidState ()
                 stateStack.Push(nextState)
             | T_pareno ->
@@ -1180,10 +1359,10 @@ let parse (reducer : Reducer) (input : Terminal seq) : Result<Program, string> =
                 lhsStack.Push(reduced)
                 let nextState =
                     match stateStack.Peek() with
-                    | 0 -> 18
-                    | 5 -> 18
-                    | 14 -> 18
-                    | 17 -> 18
+                    | 0 -> 19
+                    | 6 -> 19
+                    | 15 -> 19
+                    | 18 -> 19
                     | _ -> failwithInvalidState ()
                 stateStack.Push(nextState)
             | T_strlit _ ->
@@ -1195,16 +1374,124 @@ let parse (reducer : Reducer) (input : Terminal seq) : Result<Program, string> =
                 lhsStack.Push(reduced)
                 let nextState =
                     match stateStack.Peek() with
-                    | 0 -> 18
-                    | 5 -> 18
-                    | 14 -> 18
-                    | 17 -> 18
+                    | 0 -> 19
+                    | 6 -> 19
+                    | 15 -> 19
+                    | 18 -> 19
                     | _ -> failwithInvalidState ()
                 stateStack.Push(nextState)
             | _ ->
                 // error
                 keepGoing <- false
-        | 24 ->
+        | 25 ->
+            match lookahead with
+            | _ when lookaheadIsEof ->
+                // reduce
+                stateStack.Pop() |> ignore
+                let arg1 = lhsStack.Pop() :?> Binding
+                let reductionArgs = (arg1)
+                let reduced = reducer.MODMEM_BIND reductionArgs
+                lhsStack.Push(reduced)
+                let nextState =
+                    match stateStack.Peek() with
+                    | 1 -> 27
+                    | _ -> failwithInvalidState ()
+                stateStack.Push(nextState)
+            | T_let ->
+                // reduce
+                stateStack.Pop() |> ignore
+                let arg1 = lhsStack.Pop() :?> Binding
+                let reductionArgs = (arg1)
+                let reduced = reducer.MODMEM_BIND reductionArgs
+                lhsStack.Push(reduced)
+                let nextState =
+                    match stateStack.Peek() with
+                    | 1 -> 27
+                    | _ -> failwithInvalidState ()
+                stateStack.Push(nextState)
+            | _ ->
+                // error
+                keepGoing <- false
+        | 26 ->
+            match lookahead with
+            | _ when lookaheadIsEof ->
+                // reduce
+                let reduced = reducer.MODMEMS_
+                lhsStack.Push(reduced)
+                let nextState =
+                    match stateStack.Peek() with
+                    | 26 -> 1
+                    | _ -> failwithInvalidState ()
+                stateStack.Push(nextState)
+            | T_let ->
+                // reduce
+                let reduced = reducer.MODMEMS_
+                lhsStack.Push(reduced)
+                let nextState =
+                    match stateStack.Peek() with
+                    | 26 -> 1
+                    | _ -> failwithInvalidState ()
+                stateStack.Push(nextState)
+            | _ ->
+                // error
+                keepGoing <- false
+        | 27 ->
+            match lookahead with
+            | _ when lookaheadIsEof ->
+                // reduce
+                stateStack.Pop() |> ignore
+                stateStack.Pop() |> ignore
+                let arg2 = lhsStack.Pop() :?> ModuleMember
+                let arg1 = lhsStack.Pop() :?> ModuleMember list
+                let reductionArgs = (arg1, arg2)
+                let reduced = reducer.MODMEMS_MODMEMS_MODMEM reductionArgs
+                lhsStack.Push(reduced)
+                let nextState =
+                    match stateStack.Peek() with
+                    | 26 -> 1
+                    | _ -> failwithInvalidState ()
+                stateStack.Push(nextState)
+            | T_let ->
+                // reduce
+                stateStack.Pop() |> ignore
+                stateStack.Pop() |> ignore
+                let arg2 = lhsStack.Pop() :?> ModuleMember
+                let arg1 = lhsStack.Pop() :?> ModuleMember list
+                let reductionArgs = (arg1, arg2)
+                let reduced = reducer.MODMEMS_MODMEMS_MODMEM reductionArgs
+                lhsStack.Push(reduced)
+                let nextState =
+                    match stateStack.Peek() with
+                    | 26 -> 1
+                    | _ -> failwithInvalidState ()
+                stateStack.Push(nextState)
+            | _ ->
+                // error
+                keepGoing <- false
+        | 28 ->
+            match lookahead with
+            | T_id x ->
+                // shift
+                lhsStack.Push(x)
+                if inputEnumerator.MoveNext()
+                then lookahead <- inputEnumerator.Current
+                else lookaheadIsEof <- true
+                stateStack.Push(29)
+            | _ ->
+                // error
+                keepGoing <- false
+        | 29 ->
+            match lookahead with
+            | T_eq ->
+                // shift
+                if inputEnumerator.MoveNext()
+                then lookahead <- inputEnumerator.Current
+                else lookaheadIsEof <- true
+                stateStack.Push(26)
+            | _ ->
+                // error
+                keepGoing <- false
+        | 30 ->
             match lookahead with
             | _ when lookaheadIsEof ->
                 // accept
@@ -1218,7 +1505,7 @@ let parse (reducer : Reducer) (input : Terminal seq) : Result<Program, string> =
             | _ ->
                 // error
                 keepGoing <- false
-        | 25 ->
+        | 31 ->
             match lookahead with
             | _ when lookaheadIsEof ->
                 // accept
@@ -1232,7 +1519,21 @@ let parse (reducer : Reducer) (input : Terminal seq) : Result<Program, string> =
             | _ ->
                 // error
                 keepGoing <- false
-        | 26 ->
+        | 32 ->
+            match lookahead with
+            | _ when lookaheadIsEof ->
+                // accept
+                stateStack.Pop() |> ignore
+                let arg1 = lhsStack.Pop() :?> Module
+                let reductionArgs = (arg1)
+                let reduced = reducer.PROGRAM_MODULE reductionArgs
+                result <- reduced
+                accepted <- true
+                keepGoing <- false
+            | _ ->
+                // error
+                keepGoing <- false
+        | 33 ->
             match lookahead with
             | T_id x ->
                 // shift
@@ -1240,11 +1541,11 @@ let parse (reducer : Reducer) (input : Terminal seq) : Result<Program, string> =
                 if inputEnumerator.MoveNext()
                 then lookahead <- inputEnumerator.Current
                 else lookaheadIsEof <- true
-                stateStack.Push(27)
+                stateStack.Push(34)
             | _ ->
                 // error
                 keepGoing <- false
-        | 27 ->
+        | 34 ->
             match lookahead with
             | T_eq ->
                 // reduce
@@ -1256,7 +1557,7 @@ let parse (reducer : Reducer) (input : Terminal seq) : Result<Program, string> =
                 lhsStack.Push(reduced)
                 let nextState =
                     match stateStack.Peek() with
-                    | 3 -> 4
+                    | 4 -> 5
                     | _ -> failwithInvalidState ()
                 stateStack.Push(nextState)
             | _ ->

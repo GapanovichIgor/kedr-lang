@@ -1,5 +1,9 @@
 PROGRAM : Program
 
+MODULE  : Module
+MODMEMS : ModuleMember list
+MODMEM  : ModuleMember
+
 BIND       : Binding
 BINDPARAMS : BindingParameter list
 BINDPARAM  : BindingParameter
@@ -14,7 +18,11 @@ id      : string
 strlit  : string
 numlit  : uint32 * uint32 option
 
-PROGRAM -> EXPR | BIND
+PROGRAM -> EXPR | BIND | MODULE
+
+MODULE  -> module id eq MODMEMS
+MODMEMS -> MODMEMS MODMEM | ''
+MODMEM  -> BIND
 
 BIND       -> let id BINDPARAMS TYPEANNOT eq EXPR
 BINDPARAMS -> BINDPARAMS BINDPARAM | ''

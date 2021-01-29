@@ -15,6 +15,7 @@ let private toTerminal token =
     | T.Let -> T_let
     | T.Equals -> T_eq
     | T.Colon -> T_colon
+    | T.Module -> T_module
     | _ -> failwith "TODO"
 
 let private reducer = {
@@ -33,6 +34,7 @@ let private reducer = {
           body = body }
     PROGRAM_BIND = PBinding
     PROGRAM_EXPR = PExpr
+    PROGRAM_MODULE = PModule
     TYPEANNOT_ = None
     TYPEANNOT_colon_id = Some
     EAPP_EAPP_EPAREN = Application
@@ -43,6 +45,12 @@ let private reducer = {
     ESIMP_numlit = NumLit
     ESIMP_strlit = StrLit
     EXPR_EAPP = id
+    MODMEMS_ = []
+    MODMEMS_MODMEMS_MODMEM = fun (members, member_) ->  member_ :: members
+    MODMEM_BIND = Value
+    MODULE_module_id_eq_MODMEMS = fun (name, members) ->
+        { name = name
+          members = members |> List.rev }
 }
 
 let parse (tokens : seq<Token>) : Result<Program, string> =

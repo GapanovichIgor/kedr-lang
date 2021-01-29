@@ -20,6 +20,14 @@ type Binding =
       typeAnnotation : TypeId option
       body : Expr }
 
+type ModuleMember =
+    | Value of Binding
+
+type Module =
+    { name : Identity
+      members : ModuleMember list }
+
 type Program =
     | PExpr of Expr
     | PBinding of Binding
+    | PModule of Module
